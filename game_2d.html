@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>斯诺克台球 - 双人对战</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            color: white;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(12, 12, 12, 0.92);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e6d2ad;
+        }
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.42);
+            color: #e8d8bc;
+            text-decoration: none;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .nav-link.active,
+        .nav-link:hover {
+            background: rgba(212, 165, 116, 0.18);
+            border-color: rgba(212, 165, 116, 0.78);
+            color: #fff;
+        }
+        .app-shell {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 30px;
+            padding: 20px;
+        }
+        canvas {
+            border: 4px solid #5a3a22;
+            background: #111;
+            cursor: crosshair;
+            display: block;
+        }
+        .panel {
+            padding: 15px;
+            background: linear-gradient(180deg, rgba(50, 30, 15, 0.8), rgba(30, 20, 10, 0.9));
+            border-radius: 15px;
+            border: 2px solid #5a3a22;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            height: 100%; /* 填充父容器高度 */
+            display: flex;
+            flex-direction: column;
+        }
+        .info {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .tips {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #aaa;
+        }
+        button {
+            margin: 8px;
+            padding: 12px 32px;
+            font-size: 16px;
+            cursor: pointer;
+            background: linear-gradient(180deg, #6b4423, #4a2f15);
+            color: white;
+            border: 2px solid #8a5a33;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background: linear-gradient(180deg, #7a5a33, #5a3f25);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .message {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #ff0;
+            min-height: 22px;
+        }
+
+        /* 纵向力度仪表盘 */
+        .power-gauge-container {
+            width: 45px;
+            height: 240px;
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            border-radius: 12px;
+            padding: 5px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            border: 2px solid #444;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+            margin: 0 auto;
+        }
+        .power-gauge {
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(to top, #00ff66, #66ff00, #ffff00, #ff9900, #ff3300);
+            border-radius: 6px;
+            transition: none;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+        }
+        .power-label {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 16px;
+            color: #d4a574;
+            font-weight: 500;
+        }
+        .gauge-marker {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            text-align: right;
+            padding-right: 8px;
+            font-size: 11px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        /* 圆形方向控制 */
+        .direction-control {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            position: relative;
+            margin: 15px auto;
+            cursor: crosshair;
+            border: 3px solid #555;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.05);
+        }
+        .direction-control::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 180px;
+            height: 180px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px dashed #444;
+        }
+        .direction-control::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 140px;
+            height: 140px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px dashed #333;
+        }
+        .direction-handle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #66ccff, #0088cc);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 170, 255, 0.6);
+        }
+        .direction-center {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #fff, #ccc);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .direction-label {
+            text-align: center;
+            font-size: 13px;
+            margin-top: 10px;
+            color: #aaa;
+        }
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 380px; /* 引导线移出后进一步压缩 */
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #d4a574;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e0d0b0;
+        }
+        .stat-value.highlight {
+            color: #ffcc00;
+        }
+        .stat-value.danger {
+            color: #ff6644;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin: 2px;
+            background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+            border: 1px solid #555;
+            color: #ccc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-sm:hover {
+            background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+            border-color: #777;
+            color: #fff;
+        }
+        .btn-sm.active {
+            background: linear-gradient(180deg, #6b4423, #4a2f15);
+            border-color: #8a5a33;
+            color: #fff;
+            box-shadow: 0 0 8px rgba(180, 120, 60, 0.4);
+        }
+        .btn-action {
+            padding: 10px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            margin: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-shoot {
+            background: linear-gradient(180deg, #c0392b, #8b0000);
+            border: 2px solid #e74c3c;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(200, 0, 0, 0.3);
+        }
+        .btn-shoot:hover {
+            background: linear-gradient(180deg, #e74c3c, #a00000);
+            box-shadow: 0 6px 16px rgba(220, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+        .btn-reset {
+            background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+            border: 2px solid #666;
+            color: #ccc;
+        }
+        .btn-reset:hover {
+            background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+            border-color: #888;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            margin: 12px 0;
+        }
+
+        .let-play-banner {
+            background: linear-gradient(135deg, rgba(200, 150, 0, 0.15), rgba(200, 100, 0, 0.1));
+            border: 1px solid rgba(200, 150, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .message {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #ff0;
+            min-height: 20px;
+            flex-shrink: 0;
+        }
+        .let-play-banner {
+            background: linear-gradient(135deg, rgba(200, 150, 0, 0.15), rgba(200, 100, 0, 0.1));
+            border: 1px solid rgba(200, 150, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            margin-top: 8px;
+            flex-shrink: 0;
+        }
+        .let-play-banner .title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ffcc00;
+            margin-bottom: 6px;
+        }
+
+        /* 新布局样式 */
+        .info-layout {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            flex: 1;
+            min-height: 0;
+        }
+        .left-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 110px;
+        }
+        .guide-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+        }
+        .scoreboard-slim {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 110px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .player-score {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+        }
+        .player-score.active {
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        .player-label {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .score-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e0d0b0;
+            line-height: 1.2;
+        }
+        .break-value {
+            font-size: 10px;
+            color: #888;
+            margin-top: 1px;
+        }
+        .operations-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+        }
+        .game-status {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+        }
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+        }
+        .status-label {
+            color: #aaa;
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        .status-value {
+            font-weight: 600;
+            color: #e0d0b0;
+        }
+        .status-value.highlight {
+            color: #ffcc00;
+        }
+        .status-value.danger {
+            color: #ff6644;
+        }
+        .operation-section {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px;
+        }
+        .section-label {
+            font-size: 11px;
+            color: #aaa;
+            text-align: center;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-sm:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-color {
+            min-width: 46px;
+            padding: 6px 8px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav" aria-label="页面导航">
+        <div class="nav-title">斯诺克台球 - 双人对战</div>
+        <div class="nav-links">
+            <a class="nav-link active" href="game_2d - 副本.html">游戏</a>
+            <a class="nav-link" href="game_2d_rules.html">规则说明</a>
+        </div>
+    </nav>
+
+    <main class="app-shell">
+    <!-- 左侧列 -->
+    <div class="left-column">
+        <!-- 左上：力度仪表盘 -->
+        <div class="panel">
+            <div class="section-title">力度</div>
+            <div style="text-align: center;">
+                <div class="power-gauge-container" id="powerContainer">
+                    <div class="gauge-marker" style="top: 5px;">Max</div>
+                    <div class="gauge-marker" style="top: 117px;">50%</div>
+                    <div class="gauge-marker" style="top: 225px;">Min</div>
+                    <div class="power-gauge" id="powerGauge"></div>
+                </div>
+                <div class="power-label"><span id="powerLabel">0</span>%</div>
+            </div>
+        </div>
+
+        <!-- 左下：方向仪表盘 -->
+        <div class="panel">
+            <div class="section-title">方向</div>
+            <div style="text-align: center;">
+                <div class="direction-control" id="directionControl">
+                    <canvas id="directionTicks" width="200" height="200" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+                    <div class="direction-center"></div>
+                    <div class="direction-handle" id="directionHandle"></div>
+                </div>
+                <div class="direction-label"><span id="angleDisplay">0°</span></div>
+                <div class="direction-label" style="font-size:11px;color:#666;">←→ 1°步进 | Shift+←→ 0.1°微调</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧列 -->
+    <div class="right-column">
+        <!-- 右上：球桌 -->
+        <canvas id="table" width="900" height="500"></canvas>
+
+        <!-- 右下：数据和按钮区 -->
+        <div class="panel">
+            <div class="section-title">游戏信息</div>
+            
+            <div class="info-layout">
+                <!-- 左侧：瘦身记分牌 + 引导线 -->
+                <div class="left-block">
+                    <div class="scoreboard-slim">
+                        <div class="player-score">
+                            <div class="player-label" style="color:#4a8a4a;">玩家1</div>
+                            <div class="score-value" id="score1">0</div>
+                            <div class="break-value" id="break1">0</div>
+                        </div>
+                        <div class="player-score">
+                            <div class="player-label" style="color:#8a4a4a;">玩家2</div>
+                            <div class="score-value" id="score2">0</div>
+                            <div class="break-value" id="break2">0</div>
+                        </div>
+                    </div>
+                    <div class="guide-section">
+                        <div class="section-label">引导线</div>
+                        <div class="btn-group">
+                            <button class="btn-sm" id="guideOff" onclick="setGuideMode('off')">关</button>
+                            <button class="btn-sm active" id="guideLong" onclick="setGuideMode('long')">长</button>
+                            <button class="btn-sm" id="guideShort" onclick="setGuideMode('short')">短</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：操作模块 -->
+                <div class="operations-panel">
+                    <!-- 比赛状态 -->
+                    <div class="game-status">
+                        <div class="status-item">
+                            <span class="status-label">目标球</span>
+                            <span class="status-value highlight" id="currentTarget">红球</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">阶段</span>
+                            <span class="status-value" id="phase">红球阶段</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">剩余红球</span>
+                            <span class="status-value danger" id="remainingRed">15</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">剩余分数</span>
+                            <span class="status-value highlight" id="remainedScore">147</span>
+                        </div>
+                    </div>
+
+                    <!-- 指定彩球 -->
+                    <div class="operation-section" id="nominationSection">
+                        <div class="section-label">指定彩球</div>
+                        <div class="btn-group">
+                            <button class="btn-sm btn-color" id="nominateYellow" onclick="nominateColor('黄球')">黄2</button>
+                            <button class="btn-sm btn-color" id="nominateGreen" onclick="nominateColor('绿球')">绿3</button>
+                            <button class="btn-sm btn-color" id="nominateBrown" onclick="nominateColor('棕球')">棕4</button>
+                            <button class="btn-sm btn-color" id="nominateBlue" onclick="nominateColor('蓝球')">蓝5</button>
+                            <button class="btn-sm btn-color" id="nominatePink" onclick="nominateColor('粉球')">粉6</button>
+                            <button class="btn-sm btn-color" id="nominateBlack" onclick="nominateColor('黑球')">黑7</button>
+                        </div>
+                    </div>
+
+                    <!-- 自由球 -->
+                    <div class="operation-section">
+                        <div class="section-label">自由球</div>
+                        <div class="btn-group">
+                            <button class="btn-sm" id="freeBallCancel" onclick="cancelFreeBall()" style="display:none;">取消选择</button>
+                            <button class="btn-sm" id="freeBallSkip" onclick="skipFreeBall()" style="display:none;">不使用自由球</button>
+                        </div>
+                    </div>
+
+                    <!-- 出杆按钮 -->
+                    <div class="operation-section">
+                        <div class="btn-group" style="margin-top:8px;">
+                            <button class="btn-action btn-shoot" id="shootBtn" onclick="shoot()">出杆</button>
+                            <button class="btn-action btn-reset" onclick="resetGame()">重新开始</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 让杆面板 -->
+            <div class="let-play-banner" id="letPlayPanel" style="display:none;">
+                <div class="title">对方犯规，是否让杆？</div>
+                <div class="btn-group">
+                    <button class="btn-sm active" id="letPlayYes" onclick="letPlay(true)" style="display:none;">让犯规方继续击球</button>
+                    <button class="btn-sm" id="letPlayRestore" onclick="letPlayFromOriginal()" style="display:none;">还原重打</button>
+                    <button class="btn-sm" id="letPlayNo" onclick="letPlay(false)" style="display:none;">自己击球</button>
+                </div>
+            </div>
+            
+            <div class="message" id="message"></div>
+        </div>
+    </div>
+    </main>
+
+    <script>
+        let canvas, ctx;
+        let SCALE, TABLE_INNER_LENGTH, TABLE_INNER_WIDTH, BORDER, TABLE_WIDTH, TABLE_HEIGHT;
+        let BALL_RADIUS, FRICTION, HOLE_RADIUS, BALL_DIAMETER, BAULK_DISTANCE, D_ZONE_RADIUS;
+        let BAULK_LINE_X, D_ZONE_CENTER_X, D_ZONE_CENTER_Y;
+        let COLOR_BALLS_DEF, holes;
+
+        // 游戏状态变量
+        let balls = [];
+        let whiteBall = null;
+        let scores = [0, 0];
+        let currentPlayer = 0;
+        let currentBreak = 0;
+        let phase = 'red';
+        let pottedThisShot = [];
+        let foul = false;
+        let foulType = '';
+        let isPlacingBall = false;
+        let ballMoving = false;
+        let gameStarted = false;
+        let allBallsStopped = true;
+        let redBallPottedThisVisit = 0;
+        let colorBallPottedThisVisit = null;
+        let firstBallHit = null;
+        let shotStarted = false;
+        let freeBallMode = false;
+        let freeBallTarget = null;
+        let awaitingLetPlayDecision = false;
+        let lastFoulPenalty = 0;
+        let nominatedColor = null;
+        let shotSnapshot = null;
+        let shotContext = null;
+        let lastFoulWasMiss = false;
+        let frameStarter = 0;
+
+        // 球杆系统变量
+        let cueAngle = 0;
+        let cuePower = 0;
+        let directionControlActive = false;
+        let powerControlActive = false;
+
+        // 引导线系统变量
+        let guideMode = 'short';
+        const STOP_SPEED = 0.08;
+
+        function setGuideMode(mode) {
+            guideMode = mode;
+            document.getElementById('guideOff').className = 'btn-sm' + (mode === 'off' ? ' active' : '');
+            document.getElementById('guideLong').className = 'btn-sm' + (mode === 'long' ? ' active' : '');
+            document.getElementById('guideShort').className = 'btn-sm' + (mode === 'short' ? ' active' : '');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('table');
+            ctx = canvas.getContext('2d');
+
+            initGameConstants();
+            canvas.width = TABLE_WIDTH;
+            canvas.height = TABLE_HEIGHT;
+
+            initGame();
+            initControls();
+
+            canvas.addEventListener('click', handleCanvasClick);
+            gameLoop();
+        });
+
+        function initGameConstants() {
+            SCALE = 0.2;
+            TABLE_INNER_LENGTH = Math.round(3569 * SCALE);
+            TABLE_INNER_WIDTH = Math.round(1778 * SCALE);
+            BORDER = Math.round(30 * SCALE);
+            TABLE_WIDTH = TABLE_INNER_LENGTH + BORDER * 2;
+            TABLE_HEIGHT = TABLE_INNER_WIDTH + BORDER * 2;
+
+            BALL_RADIUS = Math.round(52.5 * SCALE / 2);
+            FRICTION = 0.99;
+            HOLE_RADIUS = Math.max(BALL_RADIUS + 4, Math.round(52.5 * SCALE));
+
+            BALL_DIAMETER = BALL_RADIUS * 2;
+            BAULK_DISTANCE = Math.round(737 * SCALE);
+            D_ZONE_RADIUS = Math.round(292 * SCALE);
+
+            BAULK_LINE_X = BORDER + BAULK_DISTANCE;
+            D_ZONE_CENTER_X = BAULK_LINE_X;
+            D_ZONE_CENTER_Y = TABLE_HEIGHT / 2;
+
+            COLOR_BALLS_DEF = [
+                { name: '黄球', color: '#FFD700', points: 2, defaultX: BAULK_LINE_X, defaultY: D_ZONE_CENTER_Y + D_ZONE_RADIUS },
+                { name: '绿球', color: '#00CC00', points: 3, defaultX: BAULK_LINE_X, defaultY: D_ZONE_CENTER_Y - D_ZONE_RADIUS },
+                { name: '棕球', color: '#8B4513', points: 4, defaultX: BAULK_LINE_X, defaultY: D_ZONE_CENTER_Y },
+                { name: '蓝球', color: '#0066FF', points: 5, defaultX: BORDER + TABLE_INNER_LENGTH / 2, defaultY: TABLE_HEIGHT / 2 },
+                { name: '粉球', color: '#FF69B4', points: 6, defaultX: BORDER + (TABLE_INNER_LENGTH / 2 + TABLE_INNER_LENGTH) / 2, defaultY: TABLE_HEIGHT / 2 },
+                { name: '黑球', color: '#111111', points: 7, defaultX: BORDER + TABLE_INNER_LENGTH - Math.round(324 * SCALE), defaultY: TABLE_HEIGHT / 2 }
+            ];
+
+            const offset = HOLE_RADIUS * 0.3;
+            holes = [
+                { x: BORDER - offset, y: BORDER - offset },
+                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER - offset * 1.2 },
+                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER - offset },
+                { x: BORDER - offset, y: BORDER + TABLE_INNER_WIDTH + offset },
+                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER + TABLE_INNER_WIDTH + offset * 1.2 },
+                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER + TABLE_INNER_WIDTH + offset }
+            ];
+        }
+
+        function initGame() {
+            balls = [];
+            scores = [0, 0];
+            currentPlayer = frameStarter;
+            currentBreak = 0;
+            phase = 'red';
+            pottedThisShot = [];
+            foul = false;
+            foulType = '';
+            isPlacingBall = true;
+            ballMoving = false;
+            gameStarted = false;
+            allBallsStopped = true;
+            freeBallMode = false;
+            freeBallTarget = null;
+            awaitingLetPlayDecision = false;
+            lastFoulPenalty = 0;
+            nominatedColor = null;
+            shotSnapshot = null;
+            shotContext = null;
+            lastFoulWasMiss = false;
+
+            whiteBall = createBall(D_ZONE_CENTER_X, TABLE_HEIGHT / 2, 'white', 'white', 0);
+            balls.push(whiteBall);
+
+            const pinkBallX = BORDER + (TABLE_INNER_LENGTH / 2 + TABLE_INNER_LENGTH) / 2;
+            const startX = pinkBallX + BALL_RADIUS * 2.1;
+            const startY = TABLE_HEIGHT / 2;
+            const spacing = BALL_RADIUS * 2.05;
+
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col <= row; col++) {
+                    const ballX = startX + row * spacing * 0.866;
+                    const ballY = startY - row * spacing / 2 + col * spacing;
+                    console.log(`红球 ${row}-${col}: (${ballX}, ${ballY})`);
+                    balls.push(createBall(
+                        ballX,
+                        ballY,
+                        '#CC2222', 'red', 1
+                    ));
+                }
+            }
+
+            COLOR_BALLS_DEF.forEach(cb => {
+                const ball = createBall(cb.defaultX, cb.defaultY, cb.color, 'color', cb.points);
+                ball.name = cb.name;
+                ball.defaultX = cb.defaultX;
+                ball.defaultY = cb.defaultY;
+                balls.push(ball);
+            });
+
+            cueAngle = 0;
+            cuePower = 0;
+            updatePowerGauge();
+            updateDirectionHandle();
+            updateUI();
+            
+            const redCount = balls.filter(b => b.type === 'red').length;
+            console.log('初始化后红球数量:', redCount);
+            console.log('所有球:', balls);
+            
+            showMessage('玩家1：请在D区点击放置白球');
+        }
+
+        function createBall(x, y, color, type, points) {
+            return { x, y, vx: 0, vy: 0, color, type, points, name: '', defaultX: x, defaultY: y };
+        }
+
+        function getColorDefinition(name) {
+            return COLOR_BALLS_DEF.find(cb => cb.name === name);
+        }
+
+        function getColorBall(name) {
+            return balls.find(b => b.type === 'color' && b.name === name) || null;
+        }
+
+        function ballValue(ball) {
+            if (!ball) return 0;
+            return ball.type === 'red' ? 1 : ball.points;
+        }
+
+        function resetShotTracking() {
+            pottedThisShot = [];
+            foul = false;
+            foulType = '';
+            shotStarted = false;
+            firstBallHit = null;
+            shotContext = null;
+        }
+
+        function getBallsOnForRules() {
+            if (phase === 'red') {
+                return balls.filter(ball => ball.type === 'red');
+            }
+            if (phase === 'color') {
+                return nominatedColor ? [nominatedColor] : [];
+            }
+            if (phase === 'final') {
+                const nextColor = getNextFinalColor();
+                return nextColor ? [nextColor] : [];
+            }
+            return [];
+        }
+
+        function getBallOnValueForRules() {
+            if (phase === 'red') return 1;
+            if (phase === 'color') return nominatedColor ? nominatedColor.points : 7;
+            if (phase === 'final') {
+                const nextColor = getNextFinalColor();
+                return nextColor ? nextColor.points : 7;
+            }
+            return 4;
+        }
+
+        function describeBallsOn(context = null) {
+            const ctx = context || captureShotContext();
+            if (ctx.phase === 'red') return '红球';
+            if (ctx.phase === 'color') return ctx.ballsOn[0] ? ctx.ballsOn[0].name : '指定彩球';
+            if (ctx.phase === 'final') return ctx.ballsOn[0] ? ctx.ballsOn[0].name : '目标彩球';
+            return '活球';
+        }
+
+        function captureShotContext() {
+            const ballsOn = getBallsOnForRules();
+            return {
+                phase,
+                ballsOn,
+                ballOnValue: getBallOnValueForRules(),
+                nominatedColor,
+                freeBallMode,
+                freeBallTarget,
+                freeBallTargetName: freeBallTarget ? freeBallTarget.name : null
+            };
+        }
+
+        function captureShotSnapshot() {
+            return {
+                balls: balls.map(ball => ({
+                    x: ball.x,
+                    y: ball.y,
+                    vx: 0,
+                    vy: 0,
+                    color: ball.color,
+                    type: ball.type,
+                    points: ball.points,
+                    name: ball.name,
+                    defaultX: ball.defaultX,
+                    defaultY: ball.defaultY,
+                    isWhite: ball === whiteBall
+                })),
+                phase,
+                nominatedColorName: nominatedColor ? nominatedColor.name : null,
+                isPlacingBall
+            };
+        }
+
+        function restoreShotSnapshot(snapshot) {
+            if (!snapshot) return;
+            balls = snapshot.balls.map(data => {
+                const ball = createBall(data.x, data.y, data.color, data.type, data.points);
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.name = data.name;
+                ball.defaultX = data.defaultX;
+                ball.defaultY = data.defaultY;
+                return ball;
+            });
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+            phase = snapshot.phase;
+            nominatedColor = snapshot.nominatedColorName ? getColorBall(snapshot.nominatedColorName) : null;
+            isPlacingBall = snapshot.isPlacingBall;
+            ballMoving = false;
+            allBallsStopped = true;
+        }
+
+        function initControls() {
+            const directionControl = document.getElementById('directionControl');
+            const powerContainer = document.getElementById('powerContainer');
+
+            // 方向控制
+            directionControl.addEventListener('mousedown', (e) => {
+                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                directionControlActive = true;
+                updateDirectionFromControl(e);
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (directionControlActive) {
+                    updateDirectionFromControl(e);
+                }
+                if (powerControlActive) {
+                    updatePowerFromGauge(e);
+                }
+            });
+            document.addEventListener('mouseup', () => {
+                directionControlActive = false;
+                powerControlActive = false;
+            });
+
+            // 纵向力度控制
+            powerContainer.addEventListener('mousedown', (e) => {
+                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                powerControlActive = true;
+                updatePowerFromGauge(e);
+            });
+
+            // 键盘控制（微调）
+            document.addEventListener('keydown', (e) => {
+                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                const step = e.shiftKey ? 0.001745 : 0.01745;
+                if (e.key === 'ArrowLeft') cueAngle -= step;
+                if (e.key === 'ArrowRight') cueAngle += step;
+                if (e.key === 'ArrowUp' && cuePower < 100) cuePower += 1;
+                if (e.key === 'ArrowDown' && cuePower > 0) cuePower -= 1;
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    shoot();
+                }
+                updatePowerGauge();
+                updateDirectionHandle();
+                updateAngleDisplay();
+            });
+        }
+
+        function updateDirectionFromControl(e) {
+            const control = document.getElementById('directionControl');
+            const rect = control.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const dx = e.clientX - centerX;
+            const dy = e.clientY - centerY;
+            const newAngle = Math.atan2(dy, dx);
+
+            const diff = newAngle - cueAngle;
+            const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            cueAngle = newAngle;
+            updateDirectionHandle();
+            updateAngleDisplay();
+        }
+
+        function updateAngleDisplay() {
+            const angleDeg = (-cueAngle * 180 / Math.PI).toFixed(2);
+            document.getElementById('angleDisplay').textContent = angleDeg + '°';
+        }
+
+        function updateDirectionHandle() {
+            const handle = document.getElementById('directionHandle');
+            const radius = 85;
+            const x = Math.cos(cueAngle) * radius;
+            const y = Math.sin(cueAngle) * radius;
+            handle.style.left = `calc(50% + ${x}px)`;
+            handle.style.top = `calc(50% + ${y}px)`;
+        }
+
+        function updatePowerFromGauge(e) {
+            const container = document.getElementById('powerContainer');
+            const rect = container.getBoundingClientRect();
+            const y = rect.bottom - e.clientY;
+            const height = rect.height - 20;
+            cuePower = Math.max(0, Math.min(100, (y / height) * 100));
+            updatePowerGauge();
+        }
+
+        function updatePowerGauge() {
+            document.getElementById('powerGauge').style.height = `${cuePower}%`;
+            document.getElementById('powerLabel').textContent = Math.round(cuePower);
+        }
+
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+
+            if (isPlacingBall && !isTableInMotion() && !awaitingLetPlayDecision) {
+                if (isValidBallPosition(mx, my)) {
+                    whiteBall.x = mx;
+                    whiteBall.y = my;
+                    isPlacingBall = false;
+                    gameStarted = true;
+                    updateUI();
+                    showMessage(`玩家${currentPlayer + 1}：调整方向和力度后点击"出杆"`);
+                } else {
+                    showMessage('请将白球放置在蓝色D区内');
+                }
+                return;
+            }
+
+            if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+
+            if (freeBallMode && !freeBallTarget) {
+                for (const ball of balls) {
+                    if (ball.type !== 'white') {
+                        const dx = ball.x - mx;
+                        const dy = ball.y - my;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < BALL_RADIUS * 2) {
+                            freeBallTarget = ball;
+                            showMessage(`已选择自由球：${ball.name}，现在可以击打`);
+                            updateUI();
+                            return;
+                        }
+                    }
+                }
+                showMessage('请点击任意非白球作为自由球');
+                return;
+            }
+
+            if (phase === 'color' && !freeBallMode) {
+                for (const ball of balls) {
+                    if (ball.type === 'color') {
+                        const dx = ball.x - mx;
+                        const dy = ball.y - my;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < BALL_RADIUS * 2) {
+                            nominateColor(ball.name);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            const dx = mx - whiteBall.x;
+            const dy = my - whiteBall.y;
+            cueAngle = Math.atan2(dy, dx);
+            updateDirectionHandle();
+        }
+
+        function shoot() {
+            if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+            if (isPlacingBall) {
+                showMessage('请先在D区放置白球');
+                return;
+            }
+            if (phase === 'color' && !freeBallMode && !nominatedColor) {
+                showMessage('请先指定一个彩球');
+                return;
+            }
+            if (freeBallMode && freeBallTarget && freeBallTarget.type === 'white') {
+                freeBallTarget = null;
+                showMessage('自由球不能指定白球');
+                return;
+            }
+
+            const power = cuePower / 100;
+            const speed = power * 12;
+
+            shotSnapshot = captureShotSnapshot();
+            shotContext = captureShotContext();
+            whiteBall.vx = Math.cos(cueAngle) * speed;
+            whiteBall.vy = Math.sin(cueAngle) * speed;
+
+            ballMoving = true;
+            allBallsStopped = false;
+            shotStarted = true;
+            firstBallHit = null;
+            pottedThisShot = [];
+            foul = false;
+
+            document.getElementById('shootBtn').disabled = true;
+            showMessage('击球中...');
+        }
+
+        function nominateColor(name) {
+            if (isTableInMotion() || awaitingLetPlayDecision || phase !== 'color' || freeBallMode) return;
+            const ball = getColorBall(name);
+            if (!ball) {
+                showMessage(`${name}不在台面上，不能指定`);
+                return;
+            }
+            nominatedColor = ball;
+            showMessage(`已指定彩球：${name}`);
+            updateUI();
+        }
+
+        function isInDZone(x, y) {
+            if (x > BAULK_LINE_X) return false;
+            if (x < BORDER + BALL_RADIUS) return false;
+            if (y < BORDER + BALL_RADIUS) return false;
+            if (y > TABLE_HEIGHT - BORDER - BALL_RADIUS) return false;
+
+            const dx = x - D_ZONE_CENTER_X;
+            const dy = y - TABLE_HEIGHT / 2;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            return dist <= D_ZONE_RADIUS - BALL_RADIUS;
+        }
+
+        function isValidBallPosition(x, y) {
+            if (!isInDZone(x, y)) return false;
+
+            for (let ball of balls) {
+                if (ball === whiteBall) continue;
+                const dx = x - ball.x;
+                const dy = y - ball.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < BALL_RADIUS * 2.5) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function updateBalls() {
+            balls.forEach(ball => {
+                ball.vx *= FRICTION;
+                ball.vy *= FRICTION;
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+
+                let nearHole = false;
+                let holeDirection = { x: 0, y: 0 };
+                holes.forEach(hole => {
+                    const dx = ball.x - hole.x;
+                    const dy = ball.y - hole.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < HOLE_RADIUS + BALL_RADIUS * 2) {
+                        nearHole = true;
+                        if (dist > 0) {
+                            holeDirection.x += dx / dist;
+                            holeDirection.y += dy / dist;
+                        }
+                    }
+                });
+
+                if (!nearHole) {
+                    if (ball.x < BORDER + BALL_RADIUS) {
+                        if (holeDirection.x < 0.5) {
+                            ball.x = BORDER + BALL_RADIUS;
+                            ball.vx *= -0.7;
+                        }
+                    }
+                    if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS) {
+                        if (holeDirection.x > -0.5) {
+                            ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
+                            ball.vx *= -0.7;
+                        }
+                    }
+                    if (ball.y < BORDER + BALL_RADIUS) {
+                        if (holeDirection.y < 0.5) {
+                            ball.y = BORDER + BALL_RADIUS;
+                            ball.vy *= -0.7;
+                        }
+                    }
+                    if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS) {
+                        if (holeDirection.y > -0.5) {
+                            ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
+                            ball.vy *= -0.7;
+                        }
+                    }
+                }
+            });
+
+            if (ballMoving) {
+                checkHoles();
+            }
+
+            if (ballMoving) {
+                for (let i = 0; i < balls.length; i++) {
+                    for (let j = i + 1; j < balls.length; j++) {
+                        ballCollision(balls[i], balls[j]);
+                    }
+                }
+            }
+
+            if (!isAnyBallMoving() && ballMoving) {
+                stopAllBalls();
+                ballMoving = false;
+            }
+
+            if (!ballMoving && !allBallsStopped) {
+                allBallsStopped = true;
+                updateUI();
+                processShotResult();
+            }
+        }
+
+        function isAnyBallMoving() {
+            return balls.some(ball => Math.hypot(ball.vx, ball.vy) > STOP_SPEED);
+        }
+
+        function isTableInMotion() {
+            return ballMoving || !allBallsStopped || isAnyBallMoving();
+        }
+
+        function stopAllBalls() {
+            balls.forEach(ball => {
+                ball.vx = 0;
+                ball.vy = 0;
+            });
+        }
+
+        function checkHoles() {
+            const toRemove = [];
+            balls.forEach(ball => {
+                holes.forEach(hole => {
+                    const dx = ball.x - hole.x;
+                    const dy = ball.y - hole.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < HOLE_RADIUS + BALL_RADIUS * 0.5) {
+                        if (!pottedThisShot.includes(ball)) {
+                            pottedThisShot.push(ball);
+                            toRemove.push(ball);
+                        }
+                    }
+                });
+            });
+            balls = balls.filter(b => !toRemove.includes(b));
+        }
+
+        function ballCollision(b1, b2) {
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < BALL_RADIUS * 2) {
+                if (shotStarted && !firstBallHit) {
+                    if (b1 === whiteBall) firstBallHit = b2;
+                    else if (b2 === whiteBall) firstBallHit = b1;
+                }
+
+                const overlap = BALL_RADIUS * 2 - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                b1.x -= nx * overlap / 2;
+                b1.y -= ny * overlap / 2;
+                b2.x += nx * overlap / 2;
+                b2.y += ny * overlap / 2;
+
+                const dvx = b1.vx - b2.vx;
+                const dvy = b1.vy - b2.vy;
+                const dvn = dvx * nx + dvy * ny;
+
+                if (dvn > 0) {
+                    b1.vx -= dvn * nx;
+                    b1.vy -= dvn * ny;
+                    b2.vx += dvn * nx;
+                    b2.vy += dvn * ny;
+                }
+            }
+        }
+
+        function isSpotOccupied(x, y) {
+            const tolerance = BALL_DIAMETER - 0.1;
+            for (const ball of balls) {
+                const dx = ball.x - x;
+                const dy = ball.y - y;
+                if (Math.sqrt(dx * dx + dy * dy) < tolerance) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function respotColorBall(ball) {
+            if (ball.type !== 'color') return;
+            const spotX = ball.defaultX;
+            const spotY = ball.defaultY;
+
+            if (!isSpotOccupied(spotX, spotY)) {
+                ball.x = spotX;
+                ball.y = spotY;
+                ball.vx = 0;
+                ball.vy = 0;
+                balls.push(ball);
+                return;
+            }
+
+            const colorSpots = COLOR_BALLS_DEF
+                .map(cb => ({ x: cb.defaultX, y: cb.defaultY, points: cb.points }))
+                .sort((a, b) => b.points - a.points);
+
+            for (const spot of colorSpots) {
+                if (!isSpotOccupied(spot.x, spot.y)) {
+                    ball.x = spot.x;
+                    ball.y = spot.y;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    balls.push(ball);
+                    return;
+                }
+            }
+
+            const centerY = TABLE_HEIGHT / 2;
+            const topCushionX = TABLE_WIDTH - BORDER - BALL_RADIUS;
+            for (let x = ball.defaultX; x <= topCushionX; x += 1) {
+                if (!isSpotOccupied(x, centerY)) {
+                    ball.x = x;
+                    ball.y = centerY;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    balls.push(ball);
+                    return;
+                }
+            }
+            for (let x = ball.defaultX; x >= BORDER + BALL_RADIUS; x -= 1) {
+                if (!isSpotOccupied(x, centerY)) {
+                    ball.x = x;
+                    ball.y = centerY;
+                    ball.vx = 0;
+                    ball.vy = 0;
+                    balls.push(ball);
+                    return;
+                }
+            }
+
+            ball.x = ball.defaultX;
+            ball.y = TABLE_HEIGHT / 2;
+            ball.vx = 0;
+            ball.vy = 0;
+            balls.push(ball);
+        }
+
+        function getNextFinalColor() {
+            const colorOrder = ['黄球', '绿球', '棕球', '蓝球', '粉球', '黑球'];
+            for (const name of colorOrder) {
+                const ball = balls.find(b => b.name === name && b.type === 'color');
+                if (ball) return ball;
+            }
+            return null;
+        }
+
+        function processShotResult() {
+            const context = shotContext || captureShotContext();
+            const pottedWhite = pottedThisShot.find(ball => ball.type === 'white');
+            const pottedReds = pottedThisShot.filter(ball => ball.type === 'red');
+            const pottedColors = pottedThisShot.filter(ball => ball.type === 'color');
+            const pottedFreeBall = context.freeBallTarget && pottedThisShot.includes(context.freeBallTarget);
+            const pottedBallsOn = pottedThisShot.filter(ball => context.ballsOn.includes(ball));
+            const expectedBall = context.ballsOn[0] || null;
+            const blackWasBallOn = context.phase === 'final' && expectedBall && expectedBall.name === '黑球';
+
+            let foulTypes = [];
+            let maxFoulPenalty = 0;
+            let isMiss = false;
+
+            const addFoul = (reason, ...values) => {
+                foulTypes.push(reason);
+                const relevantValues = values.filter(value => Number.isFinite(value) && value > 0);
+                maxFoulPenalty = Math.max(maxFoulPenalty, 4, context.ballOnValue, ...relevantValues);
+            };
+
+            if (context.phase === 'color' && !context.freeBallMode && !context.nominatedColor) {
+                addFoul('未指定彩球', 7);
+            }
+
+            if (!firstBallHit) {
+                addFoul('空杆', context.ballOnValue);
+                isMiss = true;
+            } else if (context.freeBallMode && context.freeBallTarget) {
+                if (firstBallHit !== context.freeBallTarget) {
+                    addFoul(`未先击中自由球${context.freeBallTarget.name || ''}`, ballValue(firstBallHit));
+                }
+            } else if (!isBallOn(firstBallHit, context)) {
+                addFoul(`未先击中${describeBallsOn(context)}`, ballValue(firstBallHit));
+            }
+
+            if (pottedWhite) {
+                addFoul('白球落袋', context.ballOnValue);
+            }
+
+            if (context.phase === 'red') {
+                pottedColors.forEach(ball => {
+                    if (ball !== context.freeBallTarget) {
+                        addFoul(`${ball.name}非活球入袋`, ball.points);
+                    }
+                });
+            } else if (context.phase === 'color') {
+                pottedReds.forEach(() => addFoul('彩球阶段红球入袋', 1));
+                pottedColors.forEach(ball => {
+                    const legalColor = ball === context.nominatedColor || ball === context.freeBallTarget;
+                    if (!legalColor) addFoul(`${ball.name}非指定彩球入袋`, ball.points);
+                });
+            } else if (context.phase === 'final') {
+                pottedReds.forEach(() => addFoul('清彩阶段红球入袋', 1));
+                pottedColors.forEach(ball => {
+                    const legalColor = ball === expectedBall || ball === context.freeBallTarget;
+                    if (!legalColor) addFoul(`${ball.name}未按顺序入袋`, ball.points);
+                });
+            }
+
+            if (foulTypes.length > 0) {
+                handleFoul(foulTypes, maxFoulPenalty, {
+                    isMiss,
+                    pottedWhite: !!pottedWhite,
+                    pottedColors,
+                    blackWasBallOn
+                });
+                return;
+            }
+
+            let validShot = false;
+            let shouldEndTurn = false;
+            let scored = 0;
+
+            if (context.freeBallMode && context.freeBallTarget) {
+                if (context.phase === 'red') {
+                    scored = pottedReds.length + (pottedFreeBall ? 1 : 0);
+                    if (pottedFreeBall && context.freeBallTarget.type === 'color') {
+                        respotColorBall(context.freeBallTarget);
+                    }
+                    if (scored > 0) {
+                        validShot = true;
+                        phase = 'color';
+                        nominatedColor = null;
+                    } else {
+                        shouldEndTurn = true;
+                    }
+                } else if (context.phase === 'color') {
+                    if (pottedFreeBall || pottedBallsOn.length > 0) {
+                        scored = context.ballOnValue;
+                        validShot = true;
+                        if (pottedFreeBall && context.freeBallTarget.type === 'color') {
+                            respotColorBall(context.freeBallTarget);
+                        }
+                        pottedBallsOn.forEach(ball => {
+                            if (ball.type === 'color') respotColorBall(ball);
+                        });
+                        setPhaseForNewVisit();
+                    } else {
+                        shouldEndTurn = true;
+                    }
+                } else if (context.phase === 'final') {
+                    if (pottedFreeBall || pottedBallsOn.length > 0) {
+                        scored = context.ballOnValue;
+                        validShot = true;
+                        if (pottedFreeBall && context.freeBallTarget.type === 'color') {
+                            respotColorBall(context.freeBallTarget);
+                        }
+                        if (!getNextFinalColor()) {
+                            scores[currentPlayer] += scored;
+                            currentBreak += scored;
+                            clearFreeBall();
+                            endGame();
+                            resetShotTracking();
+                            return;
+                        }
+                    } else {
+                        shouldEndTurn = true;
+                    }
+                }
+                clearFreeBall();
+            } else if (context.phase === 'red') {
+                if (pottedReds.length > 0) {
+                    scored = pottedReds.length;
+                    validShot = true;
+                    phase = 'color';
+                    nominatedColor = null;
+                } else {
+                    shouldEndTurn = true;
+                }
+            } else if (context.phase === 'color') {
+                if (pottedBallsOn.length > 0) {
+                    const color = pottedBallsOn[0];
+                    scored = color.points;
+                    validShot = true;
+                    respotColorBall(color);
+                    setPhaseForNewVisit();
+                } else {
+                    shouldEndTurn = true;
+                }
+            } else if (context.phase === 'final') {
+                if (pottedBallsOn.length > 0) {
+                    const color = pottedBallsOn[0];
+                    scored = color.points;
+                    validShot = true;
+                    if (!getNextFinalColor()) {
+                        scores[currentPlayer] += scored;
+                        currentBreak += scored;
+                        endGame();
+                        resetShotTracking();
+                        return;
+                    }
+                } else {
+                    shouldEndTurn = true;
+                }
+            }
+
+            if (context.freeBallMode && !context.freeBallTarget) {
+                clearFreeBall();
+            }
+
+            if (context.freeBallMode && context.freeBallTarget && !pottedFreeBall &&
+                balls.includes(context.freeBallTarget) && freeBallCreatesIllegalSnooker(context.freeBallTarget)) {
+                handleFoul(['利用自由球做成障碍球'], Math.max(4, context.ballOnValue), {
+                    isMiss: false,
+                    pottedWhite: false,
+                    pottedColors: [],
+                    blackWasBallOn: false
+                });
+                return;
+            }
+
+            if (validShot && scored > 0) {
+                scores[currentPlayer] += scored;
+                currentBreak += scored;
+                showMessage(`+${scored}分，连续得分：${currentBreak}`);
+                updateUI();
+            }
+
+            if (shouldEndTurn || !validShot) {
+                endTurn();
+            }
+
+            resetShotTracking();
+        }
+
+        function isBallOn(ball, context = null) {
+            const ctx = context || captureShotContext();
+            if (!ball) return false;
+            if (ctx.phase === 'red') return ball.type === 'red';
+            return ctx.ballsOn.includes(ball);
+        }
+
+        function clearFreeBall() {
+            freeBallMode = false;
+            freeBallTarget = null;
+        }
+
+        function setPhaseForNewVisit() {
+            nominatedColor = null;
+            const remainingRed = balls.filter(ball => ball.type === 'red').length;
+            if (remainingRed > 0) {
+                phase = 'red';
+                return;
+            }
+            phase = getNextFinalColor() ? 'final' : 'red';
+        }
+
+        function showLetPlayPanel(canRestore) {
+            awaitingLetPlayDecision = true;
+            document.getElementById('letPlayYes').style.display = 'inline-block';
+            document.getElementById('letPlayNo').style.display = 'inline-block';
+            document.getElementById('letPlayRestore').style.display = canRestore ? 'inline-block' : 'none';
+            document.getElementById('letPlayPanel').style.display = 'block';
+        }
+
+        function hideLetPlayPanel() {
+            awaitingLetPlayDecision = false;
+            document.getElementById('letPlayYes').style.display = 'none';
+            document.getElementById('letPlayNo').style.display = 'none';
+            document.getElementById('letPlayRestore').style.display = 'none';
+            document.getElementById('letPlayPanel').style.display = 'none';
+        }
+
+        function handleFoul(foulTypes, penalty, options = {}) {
+            const otherPlayer = 1 - currentPlayer;
+            foul = true;
+            foulType = foulTypes.join('+');
+            lastFoulPenalty = Math.max(4, penalty || 4);
+            lastFoulWasMiss = !!options.isMiss;
+            currentBreak = 0;
+
+            scores[otherPlayer] += lastFoulPenalty;
+            uniqueBalls(options.pottedColors || []).forEach(ball => respotColorBall(ball));
+            if (options.pottedWhite) resetWhiteBall();
+
+            setPhaseForNewVisit();
+            clearFreeBall();
+
+            pottedThisShot = [];
+            shotStarted = false;
+            firstBallHit = null;
+            shotContext = null;
+
+            if (options.blackWasBallOn) {
+                endGame();
+                return;
+            }
+
+            grantFreeBallAfterFoul(otherPlayer);
+
+            showLetPlayPanel(lastFoulWasMiss && !!shotSnapshot);
+            updateUI();
+            showMessage(`系统裁判判罚：玩家${currentPlayer + 1}犯规（${foulType}）罚${lastFoulPenalty}分！玩家${otherPlayer + 1}可选择自己击球、让杆或还原重打`);
+        }
+
+        function uniqueBalls(list) {
+            return [...new Set((list || []).filter(Boolean))];
+        }
+
+        function getBallsOn() {
+            const result = [];
+            if (phase === 'red') {
+                for (const b of balls) {
+                    if (b.type === 'red') result.push(b);
+                }
+            } else if (phase === 'color') {
+                if (nominatedColor) result.push(nominatedColor);
+            } else if (phase === 'final') {
+                const next = getNextFinalColor();
+                if (next) result.push(next);
+            }
+            return result;
+        }
+
+        function isBallSnookered(targetBall) {
+            const dx = targetBall.x - whiteBall.x;
+            const dy = targetBall.y - whiteBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.001) return false;
+
+            const px = -dy / dist;
+            const py = dx / dist;
+            const leftPoint = {
+                x: targetBall.x + px * BALL_RADIUS,
+                y: targetBall.y + py * BALL_RADIUS
+            };
+            const rightPoint = {
+                x: targetBall.x - px * BALL_RADIUS,
+                y: targetBall.y - py * BALL_RADIUS
+            };
+
+            return isPathBlockedToTargetEdge(leftPoint, targetBall) &&
+                isPathBlockedToTargetEdge(rightPoint, targetBall);
+        }
+
+        function isPathBlockedToTargetEdge(edgePoint, targetBall) {
+            const dx = edgePoint.x - whiteBall.x;
+            const dy = edgePoint.y - whiteBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.001) return false;
+
+            for (const ball of balls) {
+                if (ball === whiteBall || ball === targetBall) continue;
+                if (isBallOn(ball)) continue;
+                const bx = ball.x - whiteBall.x;
+                const by = ball.y - whiteBall.y;
+                const dot = bx * dx + by * dy;
+                if (dot <= 0) continue;
+                const projLen = dot / dist;
+                if (projLen >= dist) continue;
+                const projX = whiteBall.x + (dx / dist) * projLen;
+                const projY = whiteBall.y + (dy / dist) * projLen;
+                const distToProj = Math.sqrt((ball.x - projX) ** 2 + (ball.y - projY) ** 2);
+                if (distToProj < BALL_DIAMETER) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function freeBallCreatesIllegalSnooker(freeBall) {
+            if (isPinkBlackOnlyException()) return false;
+            const ballsOn = getBallsOn();
+            if (ballsOn.length === 0) return false;
+            return ballsOn.every(target => isTargetBlockedBySpecificBall(target, freeBall));
+        }
+
+        function isPinkBlackOnlyException() {
+            const reds = balls.filter(ball => ball.type === 'red');
+            const colors = balls.filter(ball => ball.type === 'color');
+            return reds.length === 0 &&
+                colors.length <= 2 &&
+                colors.every(ball => ball.name === '粉球' || ball.name === '黑球');
+        }
+
+        function isTargetBlockedBySpecificBall(targetBall, blocker) {
+            if (!targetBall || !blocker || targetBall === blocker) return false;
+            const dx = targetBall.x - whiteBall.x;
+            const dy = targetBall.y - whiteBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.001) return false;
+            const px = -dy / dist;
+            const py = dx / dist;
+            const leftPoint = {
+                x: targetBall.x + px * BALL_RADIUS,
+                y: targetBall.y + py * BALL_RADIUS
+            };
+            const rightPoint = {
+                x: targetBall.x - px * BALL_RADIUS,
+                y: targetBall.y - py * BALL_RADIUS
+            };
+            return doesSpecificBallBlockPath(leftPoint, blocker) &&
+                doesSpecificBallBlockPath(rightPoint, blocker);
+        }
+
+        function doesSpecificBallBlockPath(edgePoint, blocker) {
+            const dx = edgePoint.x - whiteBall.x;
+            const dy = edgePoint.y - whiteBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 0.001) return false;
+            const bx = blocker.x - whiteBall.x;
+            const by = blocker.y - whiteBall.y;
+            const dot = bx * dx + by * dy;
+            if (dot <= 0) return false;
+            const projLen = dot / dist;
+            if (projLen >= dist) return false;
+            const projX = whiteBall.x + (dx / dist) * projLen;
+            const projY = whiteBall.y + (dy / dist) * projLen;
+            const distToProj = Math.sqrt((blocker.x - projX) ** 2 + (blocker.y - projY) ** 2);
+            return distToProj < BALL_DIAMETER;
+        }
+
+        function grantFreeBallAfterFoul(player) {
+            freeBallMode = false;
+            freeBallTarget = null;
+
+            const ballsOn = getBallsOn();
+            if (ballsOn.length === 0) return;
+
+            for (const ballOn of ballsOn) {
+                if (!isBallSnookered(ballOn)) {
+                    return;
+                }
+            }
+
+            freeBallMode = true;
+            showMessage(`玩家${player + 1}获得自由球！可点击任意非白球选择自由球，也可点击"不使用自由球"`);
+        }
+
+        function resetWhiteBall() {
+            const index = balls.indexOf(whiteBall);
+            if (index === -1) {
+                whiteBall.x = D_ZONE_CENTER_X;
+                whiteBall.y = TABLE_HEIGHT / 2;
+                whiteBall.vx = 0;
+                whiteBall.vy = 0;
+                balls.push(whiteBall);
+            } else {
+                whiteBall.x = D_ZONE_CENTER_X;
+                whiteBall.y = TABLE_HEIGHT / 2;
+                whiteBall.vx = 0;
+                whiteBall.vy = 0;
+            }
+            isPlacingBall = true;
+        }
+
+        function endGame() {
+            clearFreeBall();
+            nominatedColor = null;
+            awaitingLetPlayDecision = false;
+            hideLetPlayPanel();
+            const scoreDiff = Math.abs(scores[0] - scores[1]);
+            if (scoreDiff === 0) {
+                const blackBall = balls.find(b => b.name === '黑球');
+                if (blackBall) {
+                    const spotX = COLOR_BALLS_DEF.find(cb => cb.name === '黑球').defaultX;
+                    const spotY = COLOR_BALLS_DEF.find(cb => cb.name === '黑球').defaultY;
+                    if (isSpotOccupied(spotX, spotY)) {
+                        blackBall.x = spotX;
+                        blackBall.y = TABLE_HEIGHT / 2;
+                    } else {
+                        blackBall.x = spotX;
+                        blackBall.y = spotY;
+                    }
+                    blackBall.vx = 0;
+                    blackBall.vy = 0;
+                } else {
+                    const cb = COLOR_BALLS_DEF.find(cb => cb.name === '黑球');
+                    const newBlack = createBall(cb.defaultX, cb.defaultY, cb.color, 'color', cb.points);
+                    newBlack.name = cb.name;
+                    newBlack.defaultX = cb.defaultX;
+                    newBlack.defaultY = cb.defaultY;
+                    balls.push(newBlack);
+                }
+                currentPlayer = Math.random() < 0.5 ? 0 : 1;
+                currentBreak = 0;
+                phase = 'final';
+                showMessage(`平分！重置黑球，玩家${currentPlayer + 1}掷币获胜先开球（自手中球）`);
+                resetWhiteBall();
+                updateUI();
+            } else {
+                const winner = scores[0] > scores[1] ? 1 : 2;
+                const winScore = Math.max(scores[0], scores[1]);
+                const loseScore = Math.min(scores[0], scores[1]);
+                showMessage(`比赛结束！玩家${winner}获胜！比分 ${winScore}:${loseScore}`);
+                gameStarted = false;
+                ballMoving = false;
+                document.getElementById('shootBtn').disabled = true;
+                updateUI();
+            }
+        }
+
+        function endTurn(options = {}) {
+            if (currentBreak > 0) {
+                showMessage(`玩家${currentPlayer + 1}连续得分：${currentBreak}分`);
+            }
+
+            currentPlayer = 1 - currentPlayer;
+            currentBreak = 0;
+            redBallPottedThisVisit = 0;
+            colorBallPottedThisVisit = null;
+            nominatedColor = null;
+            if (!options.preserveFreeBall) {
+                clearFreeBall();
+            }
+
+            const remainingRed = balls.filter(b => b.type === 'red').length;
+            if (remainingRed > 0) {
+                phase = 'red';
+            } else {
+                const nextColor = getNextFinalColor();
+                if (nextColor) {
+                    phase = 'final';
+                } else {
+                    endGame();
+                    return;
+                }
+            }
+
+            updateUI();
+
+            if (gameStarted) {
+                setTimeout(() => {
+                    showMessage(`玩家${currentPlayer + 1}的回合`);
+                }, 800);
+            }
+        }
+
+        function resetGame() {
+            initGame();
+            showMessage('游戏重置！');
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('score1').textContent = scores[0];
+            document.getElementById('score2').textContent = scores[1];
+            document.getElementById('break1').textContent = currentPlayer === 0 ? currentBreak : 0;
+            document.getElementById('break2').textContent = currentPlayer === 1 ? currentBreak : 0;
+
+            const remainingRed = balls.filter(b => b.type === 'red').length;
+            document.getElementById('remainingRed').textContent = remainingRed;
+
+            let remainedScore;
+            if (remainingRed > 0) {
+                remainedScore = 8 * remainingRed + 27;
+            } else {
+                remainedScore = 0;
+                for (const ball of balls) {
+                    if (ball.type === 'color') {
+                        remainedScore += ball.points;
+                    }
+                }
+            }
+            document.getElementById('remainedScore').textContent = remainedScore;
+
+            let target = '';
+            let phaseText = '';
+            if (!gameStarted && scores[0] !== scores[1] && scores[0] + scores[1] > 0) {
+                target = '已结束';
+                phaseText = '结束';
+            } else if (freeBallMode) {
+                target = freeBallTarget ? `自由球: ${freeBallTarget.name}` : '选择自由球';
+                phaseText = '自由球';
+            } else if (phase === 'red') {
+                target = '红球';
+                phaseText = '红球';
+            } else if (phase === 'color') {
+                target = nominatedColor ? nominatedColor.name : '请指定彩球';
+                phaseText = '彩球';
+            } else if (phase === 'final') {
+                const nextColor = getNextFinalColor();
+                target = nextColor ? nextColor.name : '结束';
+                phaseText = '最终';
+            }
+            document.getElementById('currentTarget').textContent = target;
+            document.getElementById('phase').textContent = phaseText;
+
+            // 更新活跃玩家高亮
+            const player1Score = document.querySelector('.player-score:nth-child(1)');
+            const player2Score = document.querySelector('.player-score:nth-child(2)');
+            
+            if (currentPlayer === 0 && gameStarted) {
+                player1Score.classList.add('active');
+                player2Score.classList.remove('active');
+            } else if (currentPlayer === 1 && gameStarted) {
+                player1Score.classList.remove('active');
+                player2Score.classList.add('active');
+            } else {
+                player1Score.classList.remove('active');
+                player2Score.classList.remove('active');
+            }
+
+            document.getElementById('freeBallCancel').style.display = (freeBallMode && freeBallTarget) ? 'inline-block' : 'none';
+            document.getElementById('freeBallSkip').style.display = freeBallMode ? 'inline-block' : 'none';
+
+            updateNominationButtons();
+            const needsNomination = phase === 'color' && !freeBallMode && !nominatedColor;
+            document.getElementById('shootBtn').disabled = isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall || needsNomination;
+        }
+
+        function updateNominationButtons() {
+            const colorButtons = [
+                ['nominateYellow', '黄球'],
+                ['nominateGreen', '绿球'],
+                ['nominateBrown', '棕球'],
+                ['nominateBlue', '蓝球'],
+                ['nominatePink', '粉球'],
+                ['nominateBlack', '黑球']
+            ];
+            const enabled = phase === 'color' && !freeBallMode && !awaitingLetPlayDecision && gameStarted && !isTableInMotion();
+            document.getElementById('nominationSection').style.display = phase === 'color' && !freeBallMode ? 'block' : 'none';
+
+            colorButtons.forEach(([id, name]) => {
+                const button = document.getElementById(id);
+                const ball = getColorBall(name);
+                button.disabled = !enabled || !ball;
+                button.className = 'btn-sm btn-color' + (nominatedColor && nominatedColor.name === name ? ' active' : '');
+            });
+        }
+
+        function cancelFreeBall() {
+            freeBallTarget = null;
+            showMessage('请重新选择自由球');
+            updateUI();
+        }
+
+        function skipFreeBall() {
+            clearFreeBall();
+            showMessage('已放弃使用自由球，正常进行比赛');
+            updateUI();
+        }
+
+        function letPlay(decide) {
+            const otherPlayer = 1 - currentPlayer;
+            hideLetPlayPanel();
+
+            if (decide) {
+                showMessage(`玩家${otherPlayer + 1}选择让杆，玩家${currentPlayer + 1}继续击球`);
+                if (whiteBall) {
+                    whiteBall.vx = 0;
+                    whiteBall.vy = 0;
+                }
+                clearFreeBall();
+                setPhaseForNewVisit();
+                resetShotTracking();
+                updateUI();
+            } else {
+                resetShotTracking();
+                endTurn({ preserveFreeBall: true });
+            }
+        }
+
+        function letPlayFromOriginal() {
+            if (!lastFoulWasMiss || !shotSnapshot) {
+                letPlay(true);
+                return;
+            }
+            const otherPlayer = 1 - currentPlayer;
+            hideLetPlayPanel();
+            restoreShotSnapshot(shotSnapshot);
+            clearFreeBall();
+            resetShotTracking();
+            showMessage(`玩家${otherPlayer + 1}要求还原重打，玩家${currentPlayer + 1}从原位置继续`);
+            updateUI();
+        }
+
+        function showMessage(msg) {
+            document.getElementById('message').textContent = msg;
+        }
+
+        function drawTable() {
+            ctx.fillStyle = '#5a3a22';
+            ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+
+            ctx.fillStyle = '#004400';
+            ctx.fillRect(BORDER, BORDER, TABLE_WIDTH - BORDER * 2, TABLE_HEIGHT - BORDER * 2);
+
+            ctx.strokeStyle = '#aaddaa';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(BAULK_LINE_X, BORDER);
+            ctx.lineTo(BAULK_LINE_X, TABLE_HEIGHT - BORDER);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(D_ZONE_CENTER_X, D_ZONE_CENTER_Y, D_ZONE_RADIUS, Math.PI / 2, -Math.PI / 2);
+            ctx.stroke();
+
+            if (isPlacingBall) {
+                ctx.fillStyle = 'rgba(100,100,255,0.3)';
+                ctx.beginPath();
+                ctx.arc(D_ZONE_CENTER_X, D_ZONE_CENTER_Y, D_ZONE_RADIUS, Math.PI / 2, -Math.PI / 2);
+                ctx.fill();
+            }
+
+            const pocketRadius = HOLE_RADIUS;
+
+            ctx.fillStyle = '#1a1a1a';
+
+            ctx.beginPath();
+            ctx.arc(BORDER, BORDER, pocketRadius, Math.PI * 0.5, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER, pocketRadius, Math.PI, Math.PI * 2.5);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(BORDER, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI * 1.5);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER + TABLE_INNER_WIDTH, pocketRadius, -Math.PI * 0.5, Math.PI);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER, pocketRadius, Math.PI, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI);
+            ctx.fill();
+
+            ctx.strokeStyle = '#5a3a22';
+            ctx.lineWidth = 4;
+        }
+
+        function drawGuideLines() {
+            if (guideMode === 'off' || isTableInMotion() || !whiteBall || !gameStarted) {
+                return;
+            }
+
+            const power = cuePower / 100;
+            const speed = Math.max(power * 12, 0.5);
+
+            const whiteVx = Math.cos(cueAngle) * speed;
+            const whiteVy = Math.sin(cueAngle) * speed;
+
+            const maxLength = guideMode === 'long' ? 1500 : 350;
+
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 3]);
+
+            let closestBall = null;
+            let closestHit = null;
+            let minDist = Infinity;
+
+            for (const ball of balls) {
+                if (ball.type === 'white') continue;
+
+                const dx = ball.x - whiteBall.x;
+                const dy = ball.y - whiteBall.y;
+                const dot = dx * whiteVx + dy * whiteVy;
+
+                if (dot <= 0) continue;
+
+                const vmag = Math.sqrt(whiteVx * whiteVx + whiteVy * whiteVy);
+                if (vmag < 0.01) continue;
+
+                const projLen = dot / vmag;
+                const projX = whiteBall.x + (whiteVx / vmag) * projLen;
+                const projY = whiteBall.y + (whiteVy / vmag) * projLen;
+
+                const distToBall = Math.sqrt((ball.x - projX) ** 2 + (ball.y - projY) ** 2);
+
+                if (distToBall < BALL_RADIUS * 2 && projLen < minDist) {
+                    const overlap = (BALL_RADIUS * 2 - distToBall) / vmag;
+                    const hitTime = projLen / vmag - overlap;
+                    
+                    if (hitTime > 0) {
+                        minDist = projLen;
+                        closestBall = ball;
+                        closestHit = {
+                            x: whiteBall.x + whiteVx * hitTime,
+                            y: whiteBall.y + whiteVy * hitTime
+                        };
+                    }
+                }
+            }
+
+            let endX, endY;
+            if (closestHit) {
+                endX = closestHit.x;
+                endY = closestHit.y;
+            } else {
+                endX = whiteBall.x + whiteVx * (maxLength / speed);
+                endY = whiteBall.y + whiteVy * (maxLength / speed);
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.moveTo(whiteBall.x, whiteBall.y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            if (closestBall && closestHit) {
+                const nx = (closestBall.x - closestHit.x) / (BALL_RADIUS * 2);
+                const ny = (closestBall.y - closestHit.y) / (BALL_RADIUS * 2);
+                const dvn = whiteVx * nx + whiteVy * ny;
+
+                const whiteAfterVx = whiteVx - 2 * dvn * nx;
+                const whiteAfterVy = whiteVy - 2 * dvn * ny;
+                const ballVx = 2 * dvn * nx;
+                const ballVy = 2 * dvn * ny;
+
+                ctx.strokeStyle = 'rgba(200, 200, 255, 0.7)';
+                ctx.beginPath();
+                ctx.moveTo(closestHit.x, closestHit.y);
+                ctx.lineTo(closestHit.x + whiteAfterVx * (maxLength / speed * 0.5), closestHit.y + whiteAfterVy * (maxLength / speed * 0.5));
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
+                ctx.beginPath();
+                ctx.moveTo(closestHit.x, closestHit.y);
+                ctx.lineTo(closestHit.x + ballVx * (maxLength / speed * 0.5), closestHit.y + ballVy * (maxLength / speed * 0.5));
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+                ctx.beginPath();
+                ctx.arc(closestHit.x, closestHit.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.setLineDash([]);
+        }
+
+        function predictCollision(x1, y1, vx1, vy1, x2, y2, vx2, vy2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const dvx = vx1 - vx2;
+            const dvy = vy1 - vy2;
+            const a = dvx * dvx + dvy * dvy;
+
+            if (a === 0) return null;
+
+            const b = 2 * (dx * dvx + dy * dvy);
+            const c = dx * dx + dy * dy - (BALL_RADIUS * 2) * (BALL_RADIUS * 2);
+            const discriminant = b * b - 4 * a * c;
+
+            if (discriminant < 0) return null;
+
+            const t = (-b - Math.sqrt(discriminant)) / (2 * a);
+
+            if (t < 0) return null;
+
+            const hitX = x1 + vx1 * t;
+            const hitY = y1 + vy1 * t;
+
+            const nx = (x2 - hitX) / (BALL_RADIUS * 2);
+            const ny = (y2 - hitY) / (BALL_RADIUS * 2);
+
+            const dvn = vx1 * nx + vy1 * ny;
+
+            return {
+                distance: t * Math.sqrt(vx1 * vx1 + vy1 * vy1),
+                vx1: vx1 - dvn * nx,
+                vy1: vy1 - dvn * ny,
+                vx2: dvn * nx,
+                vy2: dvn * ny
+            };
+        }
+
+        function predictWallCollision(x, y, vx, vy) {
+            const steps = 1000;
+            let closestDist = Infinity;
+            let hitPoint = null;
+
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const px = x + vx * t;
+                const py = y + vy * t;
+
+                if (px < BORDER + BALL_RADIUS || px > TABLE_WIDTH - BORDER - BALL_RADIUS ||
+                    py < BORDER + BALL_RADIUS || py > TABLE_HEIGHT - BORDER - BALL_RADIUS) {
+                    return { x: px, y: py, distance: t * Math.sqrt(vx * vx + vy * vy) };
+                }
+            }
+
+            return null;
+        }
+
+        function drawBalls() {
+            balls.forEach(ball => {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+
+                if (ball === freeBallTarget) {
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#FF0';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y, BALL_RADIUS + 5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                } else if (ball.type === 'color' && ball.color === '#111111') {
+                    ctx.fillStyle = '#222222';
+                    ctx.fill();
+                    ctx.strokeStyle = '#555555';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = ball.color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#222';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
+                if (ball.type === 'white') {
+                    ctx.beginPath();
+                    ctx.arc(ball.x - 3, ball.y - 3, BALL_RADIUS * 0.35, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawCue() {
+            if (isTableInMotion() || !gameStarted || isPlacingBall) return;
+
+            const cueLength = 150;
+            const startX = whiteBall.x - Math.cos(cueAngle) * (BALL_RADIUS + 10);
+            const startY = whiteBall.y - Math.sin(cueAngle) * (BALL_RADIUS + 10);
+            const endX = startX - Math.cos(cueAngle) * cueLength;
+            const endY = startY - Math.sin(cueAngle) * cueLength;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#bb8855';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        function drawPlacementHint() {
+            if (!isPlacingBall) return;
+
+            const isValid = isValidBallPosition(whiteBall.x, whiteBall.y);
+            ctx.beginPath();
+            ctx.arc(whiteBall.x, whiteBall.y, BALL_RADIUS + 5, 0, Math.PI * 2);
+            ctx.strokeStyle = isValid ? 'rgba(0,255,0,0.9)' : 'rgba(255,0,0,0.9)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawTable();
+            drawPlacementHint();
+            drawBalls();
+            drawCue();
+            drawGuideLines();
+            drawDirectionTicks();
+
+            if (isTableInMotion()) {
+                updateBalls();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawDirectionTicks() {
+            const tickCanvas = document.getElementById('directionTicks');
+            if (!tickCanvas) return;
+            const tctx = tickCanvas.getContext('2d');
+            const cx = 100, cy = 100;
+            tctx.clearRect(0, 0, 200, 200);
+
+            for (let i = 0; i < 360; i += 15) {
+                const rad = i * Math.PI / 180;
+                const isMain = i % 45 === 0;
+                const innerR = isMain ? 78 : 84;
+                const outerR = 92;
+                const x1 = cx + Math.cos(rad) * innerR;
+                const y1 = cy + Math.sin(rad) * innerR;
+                const x2 = cx + Math.cos(rad) * outerR;
+                const y2 = cy + Math.sin(rad) * outerR;
+
+                tctx.beginPath();
+                tctx.moveTo(x1, y1);
+                tctx.lineTo(x2, y2);
+                tctx.strokeStyle = isMain ? '#888' : '#555';
+                tctx.lineWidth = isMain ? 1.5 : 0.8;
+                tctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>

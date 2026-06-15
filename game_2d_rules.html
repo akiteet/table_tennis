@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>斯诺克规则说明</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #101010;
+            --panel: rgba(255, 255, 255, 0.045);
+            --panel-strong: rgba(52, 34, 19, 0.72);
+            --line: rgba(255, 255, 255, 0.1);
+            --text: #f2eee5;
+            --muted: #b7aa99;
+            --accent: #d4a574;
+            --green: #0f5f3a;
+            --red: #a83232;
+            --yellow: #d6b743;
+            --blue: #3d72d9;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, rgba(15, 95, 58, 0.28), transparent 34%), linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            color: var(--text);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.65;
+        }
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 22px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(12, 12, 12, 0.92);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e6d2ad;
+        }
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.42);
+            color: #e8d8bc;
+            text-decoration: none;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .nav-link.active,
+        .nav-link:hover {
+            background: rgba(212, 165, 116, 0.18);
+            border-color: rgba(212, 165, 116, 0.78);
+            color: #fff;
+        }
+        main {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 44px;
+        }
+        .page-title {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: end;
+            padding: 22px 0 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        h1, h2, h3, p { margin-top: 0; }
+        h1 {
+            font-size: 32px;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            letter-spacing: 0;
+        }
+        .lead {
+            color: var(--muted);
+            margin-bottom: 0;
+            max-width: 720px;
+        }
+        .source {
+            color: #c7b89f;
+            font-size: 13px;
+            text-align: right;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin: 22px 0;
+        }
+        .card, .section {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+        .card {
+            padding: 16px;
+            min-height: 132px;
+        }
+        .card h2 {
+            font-size: 16px;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .card p {
+            margin-bottom: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        .section {
+            padding: 20px;
+            margin-top: 16px;
+        }
+        .section h2 {
+            color: #ead6b4;
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+        .section h3 {
+            color: var(--accent);
+            font-size: 16px;
+            margin: 16px 0 8px;
+        }
+        ul, ol { padding-left: 22px; margin: 8px 0 0; }
+        li { margin: 6px 0; }
+        .score-table {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(88px, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .ball-score {
+            min-height: 72px;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: center;
+        }
+        .ball-name {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .ball-value { color: var(--muted); font-size: 13px; }
+        .red { color: #ff7878; }
+        .yellow { color: #ffe27a; }
+        .green { color: #72e28d; }
+        .brown { color: #d2a16a; }
+        .blue { color: #8fb0ff; }
+        .pink { color: #ff9ed0; }
+        .black { color: #d7d7d7; }
+        .flow {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .step {
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--panel-strong);
+            border: 1px solid rgba(212, 165, 116, 0.2);
+        }
+        .step strong {
+            display: block;
+            color: #fff2d6;
+            margin-bottom: 4px;
+        }
+        .note {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-left: 3px solid var(--accent);
+            background: rgba(212, 165, 116, 0.1);
+            color: #dfd2bc;
+        }
+        @media (max-width: 860px) {
+            .top-nav, .page-title { grid-template-columns: 1fr; }
+            .top-nav { align-items: flex-start; }
+            .source { text-align: left; }
+            .grid, .flow { grid-template-columns: 1fr; }
+            .score-table { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav" aria-label="页面导航">
+        <div class="nav-title">斯诺克台球 - 规则说明</div>
+        <div class="nav-links">
+            <a class="nav-link" href="game_2d - 副本.html">游戏</a>
+            <a class="nav-link active" href="game_2d_rules.html">规则说明</a>
+        </div>
+    </nav>
+
+    <main>
+        <header class="page-title">
+            <div>
+                <h1>斯诺克规则说明</h1>
+                <p class="lead">本页把规则文件整理成游戏中最常用的判定说明，便于边玩边查：击球顺序、计分、犯规、自由球、让杆和结束规则。</p>
+            </div>
+            <div class="source">规则来源：match_rule/snooker_rule.txt</div>
+        </header>
+
+        <section class="grid" aria-label="核心规则摘要">
+            <article class="card">
+                <h2>一红一彩</h2>
+                <p>红球未清台前，每轮以红球为活球；红球入袋后继续击打指定彩球，彩球入袋后复位。</p>
+            </article>
+            <article class="card">
+                <h2>清彩顺序</h2>
+                <p>红球全部离台后，彩球按黄、绿、棕、蓝、粉、黑依次成为活球，入袋后不再取出。</p>
+            </article>
+            <article class="card">
+                <h2>系统裁判</h2>
+                <p>游戏页自动判断可检测的犯规，并按最低 4 分、活球分值和犯规涉及球最高分值取最高罚分。</p>
+            </article>
+        </section>
+
+        <section class="section">
+            <h2>球的分值</h2>
+            <div class="score-table">
+                <div class="ball-score"><span class="ball-name red">红球</span><span class="ball-value">1 分</span></div>
+                <div class="ball-score"><span class="ball-name yellow">黄球</span><span class="ball-value">2 分</span></div>
+                <div class="ball-score"><span class="ball-name green">绿球</span><span class="ball-value">3 分</span></div>
+                <div class="ball-score"><span class="ball-name brown">棕球</span><span class="ball-value">4 分</span></div>
+                <div class="ball-score"><span class="ball-name blue">蓝球</span><span class="ball-value">5 分</span></div>
+                <div class="ball-score"><span class="ball-name pink">粉球</span><span class="ball-value">6 分</span></div>
+                <div class="ball-score"><span class="ball-name black">黑球</span><span class="ball-value">7 分</span></div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>一杆球的流程</h2>
+            <div class="flow">
+                <div class="step"><strong>1. 红球阶段</strong>先击红球或指定的自由球；红球入袋可继续。</div>
+                <div class="step"><strong>2. 指定彩球</strong>红球入袋后必须指定一个彩球作为下一击目标。</div>
+                <div class="step"><strong>3. 彩球复位</strong>红球未清台前，彩球入袋得分后放回置球点。</div>
+                <div class="step"><strong>4. 最终清彩</strong>所有红球离台后，按分值从小到大清彩。</div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>犯规与罚分</h2>
+            <ul>
+                <li>犯规最低罚 4 分。</li>
+                <li>如果活球分值更高，按活球分值处罚。</li>
+                <li>如果犯规涉及的非活球分值更高，按涉及球的最高分值处罚。</li>
+                <li>白球落袋、空杆、未先击中活球、非活球入袋、未指定彩球等都会由游戏页自动判定。</li>
+                <li>犯规后，对手可以选择自己击球、让犯规方继续，空杆情况下还可选择还原重打。</li>
+            </ul>
+            <div class="note">现实比赛中的双脚离地、非标准球杆、用物体测量等行为，在当前 2D 页面没有对应玩家动作入口，因此不会被游戏凭空判罚。</div>
+        </section>
+
+        <section class="section">
+            <h2>自由球</h2>
+            <ul>
+                <li>犯规后如果主球被造成障碍，系统会宣布对手获得自由球。</li>
+                <li>获得自由球的一方可以指定任意非白球作为活球。</li>
+                <li>自由球入袋按当前活球分值计分；需要复位的自由球会放回置球点。</li>
+                <li>如果对手要求犯规方继续击球，自由球无效。</li>
+                <li>指定自由球不能用来给所有活球造成障碍，台面只剩粉球和黑球时除外。</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>彩球放置</h2>
+            <ul>
+                <li>红球未清台前，彩球入袋或出界后应在下一击前放回置球点。</li>
+                <li>置球点被占时，放到可用的最高分值置球点。</li>
+                <li>多个彩球需要放置时，优先放置分值更高的彩球。</li>
+                <li>所有置球点均被占时，沿该球置球点到顶岸方向，在纵向中心线上找最近可放位置。</li>
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2>黑球与结束</h2>
+            <ul>
+                <li>台面只剩黑球时，黑球入袋或出现犯规通常会结束本盘。</li>
+                <li>如果双方分数相同，则重置黑球，掷币决定开球顺序，并从手中球开球。</li>
+                <li>重置黑球后，黑球入袋或犯规再次导致本盘结束。</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>
