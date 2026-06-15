@@ -367,8 +367,13 @@
             border-radius: 10px;
             padding: 10px;
             text-align: center;
-            margin-top: 8px;
-            flex-shrink: 0;
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 1000;
+            width: min(420px, calc(100vw - 48px));
+            background-color: rgba(36, 24, 8, 0.96);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
         }
         .let-play-banner .title {
             font-size: 13px;
@@ -675,6 +680,7 @@
         let freeBallMode = false;
         let freeBallTarget = null;
         let awaitingLetPlayDecision = false;
+        let foulDecisionPlayer = null;
         let lastFoulPenalty = 0;
         let nominatedColor = null;
         let shotSnapshot = null;
@@ -770,6 +776,7 @@
             freeBallMode = false;
             freeBallTarget = null;
             awaitingLetPlayDecision = false;
+            foulDecisionPlayer = null;
             lastFoulPenalty = 0;
             nominatedColor = null;
             shotSnapshot = null;
@@ -1589,6 +1596,7 @@
 
         function hideLetPlayPanel() {
             awaitingLetPlayDecision = false;
+            foulDecisionPlayer = null;
             syncLetPlayPanel();
         }
 
@@ -1606,6 +1614,7 @@
             foulType = foulTypes.join('+');
             lastFoulPenalty = Math.max(4, penalty || 4);
             lastFoulWasMiss = !!options.isMiss;
+            foulDecisionPlayer = otherPlayer;
             currentBreak = 0;
 
             scores[otherPlayer] += lastFoulPenalty;
