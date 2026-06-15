@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>斯诺克台球 - 双人对战</title>
+    <title>斯诺克台球 - 联机对战</title>
     <style>
         body {
             display: flex;
@@ -500,17 +500,90 @@
             min-width: 46px;
             padding: 6px 8px;
         }
+
+        .online-bar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto auto;
+            gap: 10px;
+            align-items: center;
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(24, 24, 24, 0.92);
+        }
+        .online-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .online-field label {
+            color: #c9b99e;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .online-field input {
+            min-height: 34px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.45);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            outline: none;
+        }
+        .online-status {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            color: #d5c8b5;
+            font-size: 13px;
+        }
+        .online-pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 0 9px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        @media (max-width: 900px) {
+            .online-bar {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <nav class="top-nav" aria-label="页面导航">
-        <div class="nav-title">斯诺克台球 - 双人对战</div>
+        <div class="nav-title">斯诺克台球 - 联机对战</div>
         <div class="nav-links">
-            <a class="nav-link active" href="game_2d.html">本地游戏</a>
-            <a class="nav-link" href="game_2d_online.html">联机游戏</a>
+            <a class="nav-link" href="game_2d.html">本地游戏</a>
+            <a class="nav-link active" href="game_2d_online.html">联机游戏</a>
             <a class="nav-link" href="game_2d_rules.html">规则说明</a>
         </div>
     </nav>
+
+
+    <section class="online-bar" aria-label="联机房间">
+        <div class="online-field">
+            <label for="serverUrl">服务器</label>
+            <input id="serverUrl" type="text" placeholder="ws://localhost:3000">
+        </div>
+        <div class="online-field">
+            <label for="roomId">房间号</label>
+            <input id="roomId" type="text" maxlength="32" placeholder="例如 snooker-001">
+        </div>
+        <button class="btn-sm" id="connectBtn" onclick="connectOnline()">连接房间</button>
+        <button class="btn-sm" id="copyInviteBtn" onclick="copyInviteLink()">复制邀请链接</button>
+        <div class="online-status">
+            <span class="online-pill" id="connectionStatus">未连接</span>
+            <span class="online-pill" id="playerRole">身份：未分配</span>
+            <span class="online-pill" id="roomStatus">房间：-</span>
+            <span class="online-pill" id="turnStatus">回合：-</span>
+        </div>
+    </section>
 
     <main class="app-shell">
     <!-- 左侧列 -->
@@ -681,6 +754,19 @@
         let shotContext = null;
         let lastFoulWasMiss = false;
         let frameStarter = 0;
+        let nextBallId = 1;
+        let lastMessage = '';
+
+        // 联机状态变量
+        const ONLINE_MODE = true;
+        let socket = null;
+        let onlineConnected = false;
+        let onlineRoomId = '';
+        let myPlayer = null;
+        let onlineClientId = null;
+        let applyingRemoteState = false;
+        let shotAuthorityPlayer = null;
+        let lastStateBroadcastAt = 0;
 
         // 球杆系统变量
         let cueAngle = 0;
@@ -709,10 +795,277 @@
 
             initGame();
             initControls();
+            initOnlineUI();
 
             canvas.addEventListener('click', handleCanvasClick);
             gameLoop();
         });
+
+
+
+        function initOnlineUI() {
+            const serverInput = document.getElementById('serverUrl');
+            const roomInput = document.getElementById('roomId');
+            const params = new URLSearchParams(window.location.search);
+            const defaultServer = getDefaultServerUrl();
+            serverInput.value = params.get('server') || defaultServer;
+            roomInput.value = params.get('room') || makeRoomId();
+            updateOnlineStatus('未连接');
+            updateOnlineTurnStatus();
+        }
+
+        function getDefaultServerUrl() {
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                if (!location.hostname.endsWith('github.io')) {
+                    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    return `${protocol}//${location.host}`;
+                }
+            }
+            return 'ws://localhost:3000';
+        }
+
+        function makeRoomId() {
+            return 'room-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function connectOnline() {
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            const roomId = document.getElementById('roomId').value.trim();
+            if (!serverUrl || !roomId) {
+                updateOnlineStatus('请填写服务器和房间号');
+                return;
+            }
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            }
+            onlineRoomId = roomId;
+            updateOnlineStatus('连接中...');
+            socket = new WebSocket(serverUrl);
+
+            socket.addEventListener('open', () => {
+                socket.send(JSON.stringify({ type: 'join', roomId }));
+            });
+
+            socket.addEventListener('message', (event) => {
+                let message;
+                try {
+                    message = JSON.parse(event.data);
+                } catch (error) {
+                    return;
+                }
+                handleOnlineMessage(message);
+            });
+
+            socket.addEventListener('close', () => {
+                onlineConnected = false;
+                myPlayer = null;
+                updateOnlineStatus('连接已断开');
+                updateOnlineTurnStatus();
+                updateUI();
+            });
+
+            socket.addEventListener('error', () => {
+                updateOnlineStatus('连接失败，请检查服务器地址');
+            });
+        }
+
+        function handleOnlineMessage(message) {
+            if (message.type === 'joined') {
+                onlineConnected = true;
+                onlineClientId = message.clientId;
+                myPlayer = message.player;
+                updateOnlineStatus('已连接');
+                updateOnlineRole(message.player);
+                updateOnlineRoom(message.roomId, message.clients);
+                if (message.state) {
+                    applyRemoteState(message.state);
+                } else if (myPlayer === 0) {
+                    broadcastState('initial-state');
+                }
+                updateUI();
+                return;
+            }
+
+            if (message.type === 'room-update') {
+                updateOnlineRoom(message.roomId, message.clients);
+                if (message.notice) showMessage(message.notice);
+                return;
+            }
+
+            if (message.type === 'state') {
+                applyRemoteState(message.state);
+                return;
+            }
+
+            if (message.type === 'error') {
+                updateOnlineStatus(message.message || '服务器错误');
+            }
+        }
+
+        function updateOnlineStatus(text) {
+            const el = document.getElementById('connectionStatus');
+            if (el) el.textContent = text;
+        }
+
+        function updateOnlineRole(player) {
+            const role = document.getElementById('playerRole');
+            if (!role) return;
+            if (player === 0) role.textContent = '身份：玩家1';
+            else if (player === 1) role.textContent = '身份：玩家2';
+            else role.textContent = '身份：观战';
+        }
+
+        function updateOnlineRoom(roomId, clients = 0) {
+            const room = document.getElementById('roomStatus');
+            if (room) room.textContent = `房间：${roomId || '-'}（${clients}人）`;
+        }
+
+        function updateOnlineTurnStatus() {
+            const turn = document.getElementById('turnStatus');
+            if (!turn) return;
+            if (!onlineConnected) {
+                turn.textContent = '回合：未连接';
+            } else if (myPlayer === currentPlayer) {
+                turn.textContent = `回合：你（玩家${currentPlayer + 1}）`;
+            } else {
+                turn.textContent = `回合：玩家${currentPlayer + 1}`;
+            }
+        }
+
+        function canControlCurrentTurn() {
+            return onlineConnected && myPlayer === currentPlayer && myPlayer !== null && myPlayer < 2;
+        }
+
+        function canResolveFoulDecision() {
+            return onlineConnected && awaitingLetPlayDecision && myPlayer === 1 - currentPlayer;
+        }
+
+        function canResetOnlineGame() {
+            return onlineConnected && myPlayer === 0 && !isTableInMotion();
+        }
+
+        function getWaitMessage() {
+            if (!onlineConnected) return '请先连接联机房间';
+            if (myPlayer === null || myPlayer > 1) return '当前为观战模式';
+            return `等待玩家${currentPlayer + 1}操作`;
+        }
+
+        function shouldSimulateTable() {
+            return !ONLINE_MODE || !onlineConnected || myPlayer === shotAuthorityPlayer;
+        }
+
+        function maybeBroadcastMovingState() {
+            if (!onlineConnected || myPlayer !== shotAuthorityPlayer) return;
+            const now = Date.now();
+            if (now - lastStateBroadcastAt < 120) return;
+            broadcastState('shot-update');
+        }
+
+        function broadcastState(reason) {
+            if (!onlineConnected || applyingRemoteState || !socket || socket.readyState !== WebSocket.OPEN) return;
+            lastStateBroadcastAt = Date.now();
+            socket.send(JSON.stringify({
+                type: 'state',
+                reason,
+                state: serializeGameState()
+            }));
+        }
+
+        function serializeGameState() {
+            return {
+                nextBallId,
+                balls: balls.map(ball => ({
+                    id: ball.id,
+                    x: ball.x,
+                    y: ball.y,
+                    vx: ball.vx,
+                    vy: ball.vy,
+                    color: ball.color,
+                    type: ball.type,
+                    points: ball.points,
+                    name: ball.name,
+                    defaultX: ball.defaultX,
+                    defaultY: ball.defaultY
+                })),
+                scores: [...scores],
+                currentPlayer,
+                currentBreak,
+                phase,
+                isPlacingBall,
+                ballMoving,
+                gameStarted,
+                allBallsStopped,
+                freeBallMode,
+                freeBallTargetId: freeBallTarget ? freeBallTarget.id : null,
+                awaitingLetPlayDecision,
+                lastFoulPenalty,
+                nominatedColorId: nominatedColor ? nominatedColor.id : null,
+                lastFoulWasMiss,
+                frameStarter,
+                cueAngle,
+                cuePower,
+                guideMode,
+                shotAuthorityPlayer,
+                message: lastMessage
+            };
+        }
+
+        function applyRemoteState(state) {
+            if (!state) return;
+            applyingRemoteState = true;
+            nextBallId = state.nextBallId || 1;
+            balls = (state.balls || []).map(data => {
+                const ball = createBall(data.x, data.y, data.color, data.type, data.points);
+                ball.id = data.id || ball.id;
+                ball.vx = data.vx || 0;
+                ball.vy = data.vy || 0;
+                ball.name = data.name || '';
+                ball.defaultX = data.defaultX;
+                ball.defaultY = data.defaultY;
+                return ball;
+            });
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+            scores = Array.isArray(state.scores) ? [...state.scores] : [0, 0];
+            currentPlayer = state.currentPlayer || 0;
+            currentBreak = state.currentBreak || 0;
+            phase = state.phase || 'red';
+            isPlacingBall = !!state.isPlacingBall;
+            ballMoving = !!state.ballMoving;
+            gameStarted = !!state.gameStarted;
+            allBallsStopped = !!state.allBallsStopped;
+            freeBallMode = !!state.freeBallMode;
+            awaitingLetPlayDecision = !!state.awaitingLetPlayDecision;
+            lastFoulPenalty = state.lastFoulPenalty || 0;
+            lastFoulWasMiss = !!state.lastFoulWasMiss;
+            frameStarter = state.frameStarter || 0;
+            cueAngle = state.cueAngle || 0;
+            cuePower = state.cuePower || 0;
+            guideMode = state.guideMode || guideMode;
+            shotAuthorityPlayer = state.shotAuthorityPlayer;
+            freeBallTarget = state.freeBallTargetId ? balls.find(ball => ball.id === state.freeBallTargetId) || null : null;
+            nominatedColor = state.nominatedColorId ? balls.find(ball => ball.id === state.nominatedColorId) || null : null;
+            updatePowerGauge();
+            updateDirectionHandle();
+            updateAngleDisplay();
+            setGuideMode(guideMode);
+            updateUI();
+            showMessage(state.message || getWaitMessage());
+            applyingRemoteState = false;
+        }
+
+        function copyInviteLink() {
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            const roomId = document.getElementById('roomId').value.trim();
+            const url = new URL(window.location.href);
+            url.searchParams.set('room', roomId);
+            if (serverUrl) url.searchParams.set('server', serverUrl);
+            navigator.clipboard?.writeText(url.toString()).then(() => {
+                updateOnlineStatus('邀请链接已复制');
+            }).catch(() => {
+                updateOnlineStatus('复制失败，请手动复制地址栏');
+            });
+        }
+
 
         function initGameConstants() {
             SCALE = 0.2;
@@ -756,6 +1109,7 @@
 
         function initGame() {
             balls = [];
+            nextBallId = 1;
             scores = [0, 0];
             currentPlayer = frameStarter;
             currentBreak = 0;
@@ -819,7 +1173,7 @@
         }
 
         function createBall(x, y, color, type, points) {
-            return { x, y, vx: 0, vy: 0, color, type, points, name: '', defaultX: x, defaultY: y };
+            return { id: 'ball-' + nextBallId++, x, y, vx: 0, vy: 0, color, type, points, name: '', defaultX: x, defaultY: y };
         }
 
         function getColorDefinition(name) {
@@ -902,6 +1256,7 @@
                     name: ball.name,
                     defaultX: ball.defaultX,
                     defaultY: ball.defaultY,
+                    id: ball.id,
                     isWhite: ball === whiteBall
                 })),
                 phase,
@@ -916,6 +1271,7 @@
                 const ball = createBall(data.x, data.y, data.color, data.type, data.points);
                 ball.vx = 0;
                 ball.vy = 0;
+                ball.id = data.id || ball.id;
                 ball.name = data.name;
                 ball.defaultX = data.defaultX;
                 ball.defaultY = data.defaultY;
@@ -935,7 +1291,7 @@
 
             // 方向控制
             directionControl.addEventListener('mousedown', (e) => {
-                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                if (!canControlCurrentTurn() || isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
                 directionControlActive = true;
                 updateDirectionFromControl(e);
             });
@@ -954,14 +1310,14 @@
 
             // 纵向力度控制
             powerContainer.addEventListener('mousedown', (e) => {
-                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                if (!canControlCurrentTurn() || isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
                 powerControlActive = true;
                 updatePowerFromGauge(e);
             });
 
             // 键盘控制（微调）
             document.addEventListener('keydown', (e) => {
-                if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                if (!canControlCurrentTurn() || isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
                 const step = e.shiftKey ? 0.001745 : 0.01745;
                 if (e.key === 'ArrowLeft') cueAngle -= step;
                 if (e.key === 'ArrowRight') cueAngle += step;
@@ -1027,6 +1383,10 @@
             const my = e.clientY - rect.top;
 
             if (isPlacingBall && !isTableInMotion() && !awaitingLetPlayDecision) {
+                if (!canControlCurrentTurn()) {
+                    showMessage(getWaitMessage());
+                    return;
+                }
                 if (isValidBallPosition(mx, my)) {
                     whiteBall.x = mx;
                     whiteBall.y = my;
@@ -1034,13 +1394,14 @@
                     gameStarted = true;
                     updateUI();
                     showMessage(`玩家${currentPlayer + 1}：调整方向和力度后点击"出杆"`);
+                    broadcastState('cue-placement');
                 } else {
                     showMessage('请将白球放置在蓝色D区内');
                 }
                 return;
             }
 
-            if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+            if (!canControlCurrentTurn() || isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
 
             if (freeBallMode && !freeBallTarget) {
                 for (const ball of balls) {
@@ -1052,6 +1413,7 @@
                             freeBallTarget = ball;
                             showMessage(`已选择自由球：${ball.name}，现在可以击打`);
                             updateUI();
+                            broadcastState('free-ball-target');
                             return;
                         }
                     }
@@ -1078,9 +1440,14 @@
             const dy = my - whiteBall.y;
             cueAngle = Math.atan2(dy, dx);
             updateDirectionHandle();
+            broadcastState('aim');
         }
 
         function shoot() {
+            if (!canControlCurrentTurn()) {
+                showMessage(getWaitMessage());
+                return;
+            }
             if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
             if (isPlacingBall) {
                 showMessage('请先在D区放置白球');
@@ -1106,6 +1473,7 @@
 
             ballMoving = true;
             allBallsStopped = false;
+            shotAuthorityPlayer = currentPlayer;
             shotStarted = true;
             firstBallHit = null;
             pottedThisShot = [];
@@ -1113,9 +1481,14 @@
 
             document.getElementById('shootBtn').disabled = true;
             showMessage('击球中...');
+            broadcastState('shot-start');
         }
 
         function nominateColor(name) {
+            if (!canControlCurrentTurn()) {
+                showMessage(getWaitMessage());
+                return;
+            }
             if (isTableInMotion() || awaitingLetPlayDecision || phase !== 'color' || freeBallMode) return;
             const ball = getColorBall(name);
             if (!ball) {
@@ -1125,6 +1498,7 @@
             nominatedColor = ball;
             showMessage(`已指定彩球：${name}`);
             updateUI();
+            broadcastState('nominate-color');
         }
 
         function isInDZone(x, y) {
@@ -1225,6 +1599,8 @@
                 allBallsStopped = true;
                 updateUI();
                 processShotResult();
+                broadcastState('shot-result');
+                shotAuthorityPlayer = null;
             }
         }
 
@@ -1863,9 +2239,14 @@
         }
 
         function resetGame() {
+            if (!canResetOnlineGame()) {
+                showMessage('只有玩家1可以重置联机房间');
+                return;
+            }
             initGame();
             showMessage('游戏重置！');
             updateUI();
+            broadcastState('reset');
         }
 
         function updateUI() {
@@ -1932,7 +2313,8 @@
 
             updateNominationButtons();
             const needsNomination = phase === 'color' && !freeBallMode && !nominatedColor;
-            document.getElementById('shootBtn').disabled = isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall || needsNomination;
+            document.getElementById('shootBtn').disabled = !canControlCurrentTurn() || isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall || needsNomination;
+            updateOnlineTurnStatus();
         }
 
         function updateNominationButtons() {
@@ -1944,7 +2326,7 @@
                 ['nominatePink', '粉球'],
                 ['nominateBlack', '黑球']
             ];
-            const enabled = phase === 'color' && !freeBallMode && !awaitingLetPlayDecision && gameStarted && !isTableInMotion();
+            const enabled = canControlCurrentTurn() && phase === 'color' && !freeBallMode && !awaitingLetPlayDecision && gameStarted && !isTableInMotion();
             document.getElementById('nominationSection').style.display = phase === 'color' && !freeBallMode ? 'block' : 'none';
 
             colorButtons.forEach(([id, name]) => {
@@ -1956,18 +2338,32 @@
         }
 
         function cancelFreeBall() {
+            if (!canControlCurrentTurn()) {
+                showMessage(getWaitMessage());
+                return;
+            }
             freeBallTarget = null;
             showMessage('请重新选择自由球');
             updateUI();
+            broadcastState('cancel-free-ball');
         }
 
         function skipFreeBall() {
+            if (!canControlCurrentTurn()) {
+                showMessage(getWaitMessage());
+                return;
+            }
             clearFreeBall();
             showMessage('已放弃使用自由球，正常进行比赛');
             updateUI();
+            broadcastState('skip-free-ball');
         }
 
         function letPlay(decide) {
+            if (!canResolveFoulDecision()) {
+                showMessage('等待非犯规方选择');
+                return;
+            }
             const otherPlayer = 1 - currentPlayer;
             hideLetPlayPanel();
 
@@ -1985,9 +2381,14 @@
                 resetShotTracking();
                 endTurn({ preserveFreeBall: true });
             }
+            broadcastState('let-play');
         }
 
         function letPlayFromOriginal() {
+            if (!canResolveFoulDecision()) {
+                showMessage('等待非犯规方选择');
+                return;
+            }
             if (!lastFoulWasMiss || !shotSnapshot) {
                 letPlay(true);
                 return;
@@ -1999,10 +2400,12 @@
             resetShotTracking();
             showMessage(`玩家${otherPlayer + 1}要求还原重打，玩家${currentPlayer + 1}从原位置继续`);
             updateUI();
+            broadcastState('restore-miss');
         }
 
         function showMessage(msg) {
-            document.getElementById('message').textContent = msg;
+            lastMessage = msg || '';
+            document.getElementById('message').textContent = lastMessage;
         }
 
         function drawTable() {
@@ -2299,8 +2702,9 @@
             drawGuideLines();
             drawDirectionTicks();
 
-            if (isTableInMotion()) {
+            if (isTableInMotion() && shouldSimulateTable()) {
                 updateBalls();
+                maybeBroadcastMovingState();
             }
 
             requestAnimationFrame(gameLoop);
