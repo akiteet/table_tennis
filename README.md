@@ -12,15 +12,33 @@
 
 [查看规则说明](https://akiteet.github.io/snooker-game/game_2d_rules.html)
 
+联机游戏页面：
+
+[进入联机对战](https://akiteet.github.io/snooker-game/game_2d_online.html)
+
 > 说明：GitHub Pages 只能托管静态网页，不能运行 WebSocket 服务端。联机版本需要另外运行或部署 `server.js`。
 
-## 联机版本
+## 怎么和朋友联机
 
-联机页面：
+### 使用已部署的公网服务器
 
-```text
-game_2d_online.html
-```
+1. 打开联机页面：
+
+   [https://akiteet.github.io/snooker-game/game_2d_online.html](https://akiteet.github.io/snooker-game/game_2d_online.html)
+
+2. 在“服务器地址”里填写联机服务器地址，例如：
+
+   ```text
+   wss://你的-render-服务地址.onrender.com
+   ```
+
+3. 两个人填写同一个房间号，然后点击“连接房间”。
+
+4. 第一个进入的是玩家 1，第二个进入的是玩家 2，后续进入者为观战。
+
+> 如果服务器刚启动较慢，等待几十秒后刷新页面再连接。
+
+### 自己本地运行服务器
 
 本地运行联机服务器：
 
@@ -35,7 +53,34 @@ npm start
 http://localhost:3000/game_2d_online.html
 ```
 
-两个玩家使用同一个服务器地址和房间号即可进入同一局。玩家 1 先进入，玩家 2 后进入，更多访问者为观战。
+同一台电脑测试时，服务器地址通常是：
+
+```text
+ws://localhost:3000
+```
+
+如果让同一局域网的朋友连接，需要让朋友打开你的局域网地址，例如：
+
+```text
+http://192.168.1.23:3000/game_2d_online.html
+```
+
+页面里的服务器地址填写：
+
+```text
+ws://192.168.1.23:3000
+```
+
+其中 `192.168.1.23` 替换为运行服务器那台电脑的实际 IPv4 地址。
+
+## 联机注意事项
+
+- GitHub Pages 只能托管网页，不能运行联机服务器。
+- 公网联机需要单独部署 `server.js`，并在页面中填写对应的 `wss://...` 地址。
+- 房间号不是密码，不要使用包含隐私信息的房间号。
+- 如果公开自己的服务器地址，其他人也可以尝试连接这个联机服务。
+- 当前联机模式适合朋友娱乐对战，没有账号系统和防作弊机制。
+- 免费服务器可能会休眠，第一次打开或连接时可能较慢。
 
 ## 联机机制
 
