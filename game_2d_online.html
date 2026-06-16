@@ -678,19 +678,6 @@
                         </div>
                     </div>
 
-                    <!-- 指定彩球 -->
-                    <div class="operation-section" id="nominationSection">
-                        <div class="section-label">指定彩球</div>
-                        <div class="btn-group">
-                            <button class="btn-sm btn-color" id="nominateYellow" onclick="nominateColor('黄球')">黄2</button>
-                            <button class="btn-sm btn-color" id="nominateGreen" onclick="nominateColor('绿球')">绿3</button>
-                            <button class="btn-sm btn-color" id="nominateBrown" onclick="nominateColor('棕球')">棕4</button>
-                            <button class="btn-sm btn-color" id="nominateBlue" onclick="nominateColor('蓝球')">蓝5</button>
-                            <button class="btn-sm btn-color" id="nominatePink" onclick="nominateColor('粉球')">粉6</button>
-                            <button class="btn-sm btn-color" id="nominateBlack" onclick="nominateColor('黑球')">黑7</button>
-                        </div>
-                    </div>
-
                     <!-- 自由球 -->
                     <div class="operation-section">
                         <div class="section-label">自由球</div>
@@ -1525,20 +1512,6 @@
                 return;
             }
 
-            if (phase === 'color' && !freeBallMode) {
-                for (const ball of balls) {
-                    if (ball.type === 'color') {
-                        const dx = ball.x - mx;
-                        const dy = ball.y - my;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < BALL_RADIUS * 2) {
-                            nominateColor(ball.name);
-                            return;
-                        }
-                    }
-                }
-            }
-
             const dx = mx - whiteBall.x;
             const dy = my - whiteBall.y;
             cueAngle = Math.atan2(dy, dx);
@@ -1554,10 +1527,6 @@
             if (isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
             if (isPlacingBall) {
                 showMessage('请先在D区放置白球');
-                return;
-            }
-            if (phase === 'color' && !freeBallMode && !nominatedColor) {
-                showMessage('请先指定一个彩球');
                 return;
             }
             if (freeBallMode && freeBallTarget && freeBallTarget.type === 'white') {
@@ -1904,9 +1873,9 @@
             const pottedReds = pottedThisShot.filter(ball => ball.type === 'red');
             const pottedColors = pottedThisShot.filter(ball => ball.type === 'color');
             const pottedFreeBall = context.freeBallTarget && pottedThisShot.includes(context.freeBallTarget);
-            const pottedBallsOn = pottedThisShot.filter(ball => context.ballsOn.includes(ball));
-            const expectedBall = context.ballsOn[0] || null;
-            const blackWasBallOn = context.phase === 'final' && expectedBall && expectedBall.name === '黑球';
+            let pottedBallsOn = pottedThisShot.filter(ball => context.ballsOn.includes(ball));
+            let expectedBall = context.ballsOn[0] || null;
+            let blackWasBallOn = context.phase === 'final' && expectedBall && expectedBall.name === '黑球';
 
             let foulTypes = [];
             let maxFoulPenalty = 0;
@@ -1917,20 +1886,35 @@
                 const relevantValues = values.filter(value => Number.isFinite(value) && value > 0);
                 maxFoulPenalty = Math.max(maxFoulPenalty, 4, context.ballOnValue, ...relevantValues);
             };
+            const markMiss = () => {
+                if (!blackWasBallOn) isMiss = true;
+            };
+            const useFirstColorHitAsTarget = () => {
+                if (context.phase !== 'color' || context.freeBallMode || context.nominatedColor) return;
+                if (!firstBallHit || firstBallHit.type !== 'color') return;
 
-            if (context.phase === 'color' && !context.freeBallMode && !context.nominatedColor) {
-                addFoul('未指定彩球', 7);
-            }
+                context.nominatedColor = firstBallHit;
+                context.ballsOn = [firstBallHit];
+                context.ballOnValue = firstBallHit.points;
+                nominatedColor = firstBallHit;
+                pottedBallsOn = pottedThisShot.filter(ball => context.ballsOn.includes(ball));
+                expectedBall = context.ballsOn[0] || null;
+                blackWasBallOn = false;
+            };
+
+            useFirstColorHitAsTarget();
 
             if (!firstBallHit) {
                 addFoul('空杆', context.ballOnValue);
-                isMiss = true;
+                markMiss();
             } else if (context.freeBallMode && context.freeBallTarget) {
                 if (firstBallHit !== context.freeBallTarget) {
                     addFoul(`未先击中自由球${context.freeBallTarget.name || ''}`, ballValue(firstBallHit));
+                    markMiss();
                 }
             } else if (!isBallOn(firstBallHit, context)) {
                 addFoul(`未先击中${describeBallsOn(context)}`, ballValue(firstBallHit));
+                markMiss();
             }
 
             if (pottedWhite) {
@@ -2436,7 +2420,7 @@
                 target = '红球';
                 phaseText = '红球';
             } else if (phase === 'color') {
-                target = nominatedColor ? nominatedColor.name : '请指定彩球';
+                target = nominatedColor ? nominatedColor.name : '彩球';
                 phaseText = '彩球';
             } else if (phase === 'final') {
                 const nextColor = getNextFinalColor();
@@ -2465,29 +2449,13 @@
             document.getElementById('freeBallSkip').style.display = freeBallMode ? 'inline-block' : 'none';
 
             updateNominationButtons();
-            const needsNomination = phase === 'color' && !freeBallMode && !nominatedColor;
-            document.getElementById('shootBtn').disabled = !canControlCurrentTurn() || isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall || needsNomination;
+            document.getElementById('shootBtn').disabled = !canControlCurrentTurn() || isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall;
             updateOnlineTurnStatus();
         }
 
         function updateNominationButtons() {
-            const colorButtons = [
-                ['nominateYellow', '黄球'],
-                ['nominateGreen', '绿球'],
-                ['nominateBrown', '棕球'],
-                ['nominateBlue', '蓝球'],
-                ['nominatePink', '粉球'],
-                ['nominateBlack', '黑球']
-            ];
-            const enabled = canControlCurrentTurn() && phase === 'color' && !freeBallMode && !awaitingLetPlayDecision && gameStarted && !isTableInMotion();
-            document.getElementById('nominationSection').style.display = phase === 'color' && !freeBallMode ? 'block' : 'none';
-
-            colorButtons.forEach(([id, name]) => {
-                const button = document.getElementById(id);
-                const ball = getColorBall(name);
-                button.disabled = !enabled || !ball;
-                button.className = 'btn-sm btn-color' + (nominatedColor && nominatedColor.name === name ? ' active' : '');
-            });
+            const section = document.getElementById('nominationSection');
+            if (section) section.style.display = 'none';
         }
 
         function cancelFreeBall() {
