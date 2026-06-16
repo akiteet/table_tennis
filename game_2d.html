@@ -856,7 +856,7 @@
 
         function getBallOnValueForRules() {
             if (phase === 'red') return 1;
-            if (phase === 'color') return nominatedColor ? nominatedColor.points : 7;
+            if (phase === 'color') return nominatedColor ? nominatedColor.points : 4;
             if (phase === 'final') {
                 const nextColor = getNextFinalColor();
                 return nextColor ? nextColor.points : 7;
