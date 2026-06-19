@@ -691,6 +691,7 @@
                     <div class="operation-section">
                         <div class="btn-group" style="margin-top:8px;">
                             <button class="btn-action btn-shoot" id="shootBtn" onclick="shoot()">出杆</button>
+                            <button class="btn-action" id="replayBtn" onclick="replayLastShot()" disabled>回放上一杆</button>
                             <button class="btn-action btn-reset" onclick="resetGame()">重新开始</button>
                         </div>
                     </div>
@@ -749,6 +750,14 @@
         let frameStarter = 0;
         let nextBallId = 1;
         let lastMessage = '';
+        let currentShotReplay = [];
+        let lastShotReplay = [];
+        let replayRestoreFrame = null;
+        let replayRestoreMessage = '';
+        let isReplaying = false;
+        let replayFrameIndex = 0;
+        let replayLastFrameAt = 0;
+        let replayCaptureCounter = 0;
 
         // 联机状态变量
         const ONLINE_MODE = true;
@@ -776,6 +785,8 @@
         const BASE_SHOT_SPEED = 12;
         const HIGH_POWER_BOOST = 2;
         const CUSHION_RESTITUTION = 0.82;
+        const REPLAY_FRAME_DURATION = 32;
+        const REPLAY_CAPTURE_INTERVAL = 2;
 
         function getShotSpeed(powerPercent) {
             const power = Math.max(0, Math.min(100, powerPercent)) / 100;
@@ -900,8 +911,15 @@
             if (message.type === 'state') {
                 if (message.reason === 'shot-update' && message.state && message.state.partial === 'motion') {
                     applyMotionState(message.state);
+                    captureRemoteReplayFrame(message.state);
                 } else {
+                    if (message.reason === 'shot-result') {
+                        finalizeShotReplayCapture();
+                    }
                     applyRemoteState(message.state);
+                    if (message.reason === 'shot-start') {
+                        startShotReplayCapture();
+                    }
                 }
                 return;
             }
@@ -1226,6 +1244,12 @@
             shotSnapshot = null;
             shotContext = null;
             lastFoulWasMiss = false;
+            currentShotReplay = [];
+            lastShotReplay = [];
+            replayRestoreFrame = null;
+            isReplaying = false;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
 
             whiteBall = createBall(D_ZONE_CENTER_X, TABLE_HEIGHT / 2, 'white', 'white', 0);
             balls.push(whiteBall);
@@ -1547,6 +1571,7 @@
 
             shotSnapshot = captureShotSnapshot();
             shotContext = captureShotContext();
+            startShotReplayCapture();
             whiteBall.vx = Math.cos(cueAngle) * speed;
             whiteBall.vy = Math.sin(cueAngle) * speed;
 
@@ -1609,72 +1634,38 @@
         }
 
         function updateBalls() {
-            const previousWhitePosition = whiteBall ? { x: whiteBall.x, y: whiteBall.y } : null;
-
             balls.forEach(ball => {
                 ball.vx *= FRICTION;
                 ball.vy *= FRICTION;
-                ball.x += ball.vx;
-                ball.y += ball.vy;
-
-                let nearHole = false;
-                let holeDirection = { x: 0, y: 0 };
-                holes.forEach(hole => {
-                    const dx = ball.x - hole.x;
-                    const dy = ball.y - hole.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < HOLE_RADIUS + BALL_RADIUS * 2) {
-                        nearHole = true;
-                        if (dist > 0) {
-                            holeDirection.x += dx / dist;
-                            holeDirection.y += dy / dist;
-                        }
-                    }
-                });
-
-                if (!nearHole) {
-                    if (ball.x < BORDER + BALL_RADIUS) {
-                        if (holeDirection.x < 0.5) {
-                            ball.x = BORDER + BALL_RADIUS;
-                            ball.vx *= -CUSHION_RESTITUTION;
-                        }
-                    }
-                    if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS) {
-                        if (holeDirection.x > -0.5) {
-                            ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
-                            ball.vx *= -CUSHION_RESTITUTION;
-                        }
-                    }
-                    if (ball.y < BORDER + BALL_RADIUS) {
-                        if (holeDirection.y < 0.5) {
-                            ball.y = BORDER + BALL_RADIUS;
-                            ball.vy *= -CUSHION_RESTITUTION;
-                        }
-                    }
-                    if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS) {
-                        if (holeDirection.y > -0.5) {
-                            ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
-                            ball.vy *= -CUSHION_RESTITUTION;
-                        }
-                    }
-                }
             });
 
-            if (previousWhitePosition && whiteBall && balls.includes(whiteBall)) {
-                detectFirstBallHitAlongWhitePath(previousWhitePosition.x, previousWhitePosition.y, whiteBall.x, whiteBall.y);
-            }
+            const maxSpeed = balls.reduce((max, ball) => Math.max(max, Math.hypot(ball.vx, ball.vy)), 0);
+            const substeps = Math.max(1, Math.min(8, Math.ceil(maxSpeed / Math.max(BALL_RADIUS * 0.75, 1))));
 
-            if (ballMoving) {
-                checkHoles();
-            }
+            for (let step = 0; step < substeps; step++) {
+                const previousWhitePosition = whiteBall && balls.includes(whiteBall)
+                    ? { x: whiteBall.x, y: whiteBall.y }
+                    : null;
 
-            if (ballMoving) {
+                balls.forEach(ball => {
+                    ball.x += ball.vx / substeps;
+                    ball.y += ball.vy / substeps;
+                    resolveCushionCollision(ball);
+                });
+
+                if (previousWhitePosition && whiteBall && balls.includes(whiteBall)) {
+                    detectFirstBallHitAlongWhitePath(previousWhitePosition.x, previousWhitePosition.y, whiteBall.x, whiteBall.y);
+                }
+
+                if (ballMoving) checkHoles();
                 for (let i = 0; i < balls.length; i++) {
                     for (let j = i + 1; j < balls.length; j++) {
                         ballCollision(balls[i], balls[j]);
                     }
                 }
             }
+
+            captureShotReplayFrame();
 
             if (!isAnyBallMoving() && ballMoving) {
                 stopAllBalls();
@@ -1683,10 +1674,44 @@
 
             if (!ballMoving && !allBallsStopped) {
                 allBallsStopped = true;
+                finalizeShotReplayCapture();
                 updateUI();
                 processShotResult();
                 broadcastState('shot-result');
                 shotAuthorityPlayer = null;
+            }
+        }
+
+        function resolveCushionCollision(ball) {
+            let nearHole = false;
+            const holeDirection = { x: 0, y: 0 };
+            holes.forEach(hole => {
+                const dx = ball.x - hole.x;
+                const dy = ball.y - hole.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < HOLE_RADIUS + BALL_RADIUS * 2) {
+                    nearHole = true;
+                    if (dist > 0) {
+                        holeDirection.x += dx / dist;
+                        holeDirection.y += dy / dist;
+                    }
+                }
+            });
+
+            if (nearHole) return;
+            if (ball.x < BORDER + BALL_RADIUS && holeDirection.x < 0.5) {
+                ball.x = BORDER + BALL_RADIUS;
+                ball.vx *= -CUSHION_RESTITUTION;
+            } else if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS && holeDirection.x > -0.5) {
+                ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
+                ball.vx *= -CUSHION_RESTITUTION;
+            }
+            if (ball.y < BORDER + BALL_RADIUS && holeDirection.y < 0.5) {
+                ball.y = BORDER + BALL_RADIUS;
+                ball.vy *= -CUSHION_RESTITUTION;
+            } else if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS && holeDirection.y > -0.5) {
+                ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
+                ball.vy *= -CUSHION_RESTITUTION;
             }
         }
 
@@ -1695,7 +1720,7 @@
         }
 
         function isTableInMotion() {
-            return ballMoving || !allBallsStopped || isAnyBallMoving();
+            return isReplaying || ballMoving || !allBallsStopped || isAnyBallMoving();
         }
 
         function stopAllBalls() {
@@ -1721,6 +1746,141 @@
                 });
             });
             balls = balls.filter(b => !toRemove.includes(b));
+        }
+
+        function captureReplayFrame(sourceBalls = balls) {
+            return sourceBalls.map(ball => ({
+                id: ball.id,
+                x: ball.x,
+                y: ball.y,
+                color: ball.color,
+                type: ball.type,
+                points: ball.points,
+                name: ball.name,
+                defaultX: ball.defaultX,
+                defaultY: ball.defaultY
+            }));
+        }
+
+        function startShotReplayCapture() {
+            currentShotReplay = [captureReplayFrame()];
+            replayCaptureCounter = 0;
+        }
+
+        function captureShotReplayFrame(force = false) {
+            if (currentShotReplay.length === 0) return;
+            replayCaptureCounter++;
+            if (!force && replayCaptureCounter % REPLAY_CAPTURE_INTERVAL !== 0) return;
+            currentShotReplay.push(captureReplayFrame());
+        }
+
+        function captureRemoteReplayFrame(state) {
+            if (!state || !Array.isArray(state.balls) || currentShotReplay.length === 0) return;
+            replayCaptureCounter++;
+            if (replayCaptureCounter % REPLAY_CAPTURE_INTERVAL !== 0) return;
+
+            const incoming = new Map(state.balls.map(ball => [ball.id, ball]));
+            const frame = balls
+                .filter(ball => incoming.has(ball.id))
+                .map(ball => {
+                    const motion = incoming.get(ball.id);
+                    return {
+                        id: ball.id,
+                        x: motion.x,
+                        y: motion.y,
+                        color: ball.color,
+                        type: ball.type,
+                        points: ball.points,
+                        name: ball.name,
+                        defaultX: ball.defaultX,
+                        defaultY: ball.defaultY
+                    };
+                });
+            currentShotReplay.push(frame);
+        }
+
+        function finalizeShotReplayCapture() {
+            captureShotReplayFrame(true);
+            if (currentShotReplay.length > 1) {
+                lastShotReplay = currentShotReplay;
+            }
+            currentShotReplay = [];
+            updateReplayButton();
+        }
+
+        function applyReplayFrame(frame) {
+            balls = frame.map(data => ({
+                id: data.id,
+                x: data.x,
+                y: data.y,
+                vx: 0,
+                vy: 0,
+                color: data.color,
+                type: data.type,
+                points: data.points,
+                name: data.name,
+                defaultX: data.defaultX,
+                defaultY: data.defaultY
+            }));
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+        }
+
+        function replayLastShot() {
+            if (isReplaying || isTableInMotion() || lastShotReplay.length < 2) return;
+            replayRestoreFrame = {
+                balls,
+                whiteBall,
+                freeBallTarget,
+                nominatedColor
+            };
+            replayRestoreMessage = lastMessage;
+            isReplaying = true;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
+            applyReplayFrame(lastShotReplay[0]);
+            showMessage('精彩回放中...');
+            updateReplayButton();
+        }
+
+        function updateReplayPlayback(timestamp) {
+            if (!isReplaying) return;
+            if (!replayLastFrameAt) {
+                replayLastFrameAt = timestamp;
+                return;
+            }
+            if (timestamp - replayLastFrameAt < REPLAY_FRAME_DURATION) return;
+
+            replayLastFrameAt = timestamp;
+            replayFrameIndex++;
+            if (replayFrameIndex >= lastShotReplay.length) {
+                finishReplay();
+                return;
+            }
+            applyReplayFrame(lastShotReplay[replayFrameIndex]);
+        }
+
+        function finishReplay() {
+            if (replayRestoreFrame) {
+                balls = replayRestoreFrame.balls;
+                whiteBall = replayRestoreFrame.whiteBall;
+                freeBallTarget = replayRestoreFrame.freeBallTarget;
+                nominatedColor = replayRestoreFrame.nominatedColor;
+            }
+            replayRestoreFrame = null;
+            isReplaying = false;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
+            showMessage(replayRestoreMessage);
+            updateUI();
+            syncLetPlayPanel();
+        }
+
+        function updateReplayButton() {
+            const button = document.getElementById('replayBtn');
+            if (!button) return;
+            button.disabled = isReplaying || lastShotReplay.length < 2 ||
+                ballMoving || !allBallsStopped || isAnyBallMoving();
+            button.textContent = isReplaying ? '回放中...' : '回放上一杆';
         }
 
         function detectFirstBallHitAlongWhitePath(startX, startY, endX, endY) {
@@ -2468,6 +2628,7 @@
 
             updateNominationButtons();
             document.getElementById('shootBtn').disabled = !canControlCurrentTurn() || isTableInMotion() || awaitingLetPlayDecision || !gameStarted || isPlacingBall;
+            updateReplayButton();
             updateOnlineTurnStatus();
         }
 
@@ -2837,7 +2998,7 @@
         }
 
         function drawPlacementHint() {
-            if (!isPlacingBall) return;
+            if (isReplaying || !isPlacingBall) return;
 
             const isValid = isValidBallPosition(whiteBall.x, whiteBall.y);
             ctx.beginPath();
@@ -2847,8 +3008,12 @@
             ctx.stroke();
         }
 
-        function gameLoop() {
-            smoothRemoteMotion();
+        function gameLoop(timestamp = 0) {
+            if (isReplaying) {
+                updateReplayPlayback(timestamp);
+            } else {
+                smoothRemoteMotion();
+            }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawTable();
             drawPlacementHint();
@@ -2856,7 +3021,7 @@
             drawCue();
             drawGuideLines();
 
-            if (isTableInMotion() && shouldSimulateTable()) {
+            if (!isReplaying && isTableInMotion() && shouldSimulateTable()) {
                 updateBalls();
                 maybeBroadcastMovingState();
             }
