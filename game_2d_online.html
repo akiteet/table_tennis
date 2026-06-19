@@ -775,6 +775,7 @@
         const STOP_SPEED = 0.08;
         const BASE_SHOT_SPEED = 12;
         const HIGH_POWER_BOOST = 2;
+        const CUSHION_RESTITUTION = 0.82;
 
         function getShotSpeed(powerPercent) {
             const power = Math.max(0, Math.min(100, powerPercent)) / 100;
@@ -1171,7 +1172,7 @@
             TABLE_HEIGHT = TABLE_INNER_WIDTH + BORDER * 2;
 
             BALL_RADIUS = Math.round(52.5 * SCALE / 2);
-            FRICTION = 0.99;
+            FRICTION = 0.985;
             HOLE_RADIUS = Math.max(BALL_RADIUS + 4, Math.round(52.5 * SCALE));
 
             BALL_DIAMETER = BALL_RADIUS * 2;
@@ -1635,25 +1636,25 @@
                     if (ball.x < BORDER + BALL_RADIUS) {
                         if (holeDirection.x < 0.5) {
                             ball.x = BORDER + BALL_RADIUS;
-                            ball.vx *= -0.7;
+                            ball.vx *= -CUSHION_RESTITUTION;
                         }
                     }
                     if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS) {
                         if (holeDirection.x > -0.5) {
                             ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
-                            ball.vx *= -0.7;
+                            ball.vx *= -CUSHION_RESTITUTION;
                         }
                     }
                     if (ball.y < BORDER + BALL_RADIUS) {
                         if (holeDirection.y < 0.5) {
                             ball.y = BORDER + BALL_RADIUS;
-                            ball.vy *= -0.7;
+                            ball.vy *= -CUSHION_RESTITUTION;
                         }
                     }
                     if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS) {
                         if (holeDirection.y > -0.5) {
                             ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
-                            ball.vy *= -0.7;
+                            ball.vy *= -CUSHION_RESTITUTION;
                         }
                     }
                 }
