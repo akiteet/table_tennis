@@ -1302,10 +1302,91 @@
         const SIDE_SPIN_DECAY = 0.992;
         const REPLAY_FRAME_DURATION = 32;
         const REPLAY_CAPTURE_INTERVAL = 2;
+        let audioContext = null;
+        let lastBallSoundAt = 0;
+        let lastCushionSoundAt = 0;
 
         function getShotSpeed(powerPercent) {
             const power = Math.max(0, Math.min(100, powerPercent)) / 100;
             return power * (BASE_SHOT_SPEED + HIGH_POWER_BOOST * power);
+        }
+
+        function getGameAudioContext() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!audioContext) audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') audioContext.resume();
+            return audioContext;
+        }
+
+        function playTone(frequency, endFrequency, duration, volume, type = 'sine') {
+            const audio = getGameAudioContext();
+            if (!audio) return;
+
+            const now = audio.currentTime;
+            const oscillator = audio.createOscillator();
+            const gain = audio.createGain();
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(Math.max(20, frequency), now);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+            gain.gain.setValueAtTime(Math.max(0.0001, volume), now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            oscillator.connect(gain);
+            gain.connect(audio.destination);
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+
+        function broadcastSoundEvent(sound, intensity = 0, detail = '') {
+            if (!onlineConnected || !socket || socket.readyState !== WebSocket.OPEN) return;
+            socket.send(JSON.stringify({
+                type: 'sound',
+                sound,
+                intensity: Number(intensity) || 0,
+                detail
+            }));
+        }
+
+        function playCueStrikeSound(powerPercent, syncOnline = true) {
+            const strength = Math.max(0.15, Math.min(1, powerPercent / 100));
+            playTone(210, 120, 0.045, 0.055 + strength * 0.09, 'triangle');
+            playTone(1200, 700, 0.018, 0.012 + strength * 0.025, 'square');
+            if (syncOnline) broadcastSoundEvent('cue', powerPercent);
+        }
+
+        function playBallCollisionSound(impactSpeed, syncOnline = true) {
+            if (impactSpeed < 0.18) return;
+            const now = performance.now();
+            if (now - lastBallSoundAt < 12) return;
+            lastBallSoundAt = now;
+            const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
+            playTone(1050 + strength * 320, 760, 0.028, 0.025 + strength * 0.08, 'sine');
+            if (syncOnline) broadcastSoundEvent('ball', impactSpeed);
+        }
+
+        function playCushionSound(impactSpeed, syncOnline = true) {
+            if (impactSpeed < 0.25) return;
+            const now = performance.now();
+            if (now - lastCushionSoundAt < 18) return;
+            lastCushionSoundAt = now;
+            const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
+            playTone(240, 135, 0.055, 0.018 + strength * 0.055, 'triangle');
+            if (syncOnline) broadcastSoundEvent('cushion', impactSpeed);
+        }
+
+        function playPocketSound(ballOrType, syncOnline = true) {
+            const ballType = typeof ballOrType === 'string' ? ballOrType : ballOrType.type;
+            const pitch = ballType === 'white' ? 115 : 145;
+            playTone(pitch, 55, 0.16, 0.085, 'sine');
+            playTone(420, 170, 0.07, 0.025, 'triangle');
+            if (syncOnline) broadcastSoundEvent('pocket', 1, ballType);
+        }
+
+        function playRemoteSound(message) {
+            if (message.sound === 'cue') playCueStrikeSound(message.intensity, false);
+            if (message.sound === 'ball') playBallCollisionSound(message.intensity, false);
+            if (message.sound === 'cushion') playCushionSound(message.intensity, false);
+            if (message.sound === 'pocket') playPocketSound(message.detail || 'color', false);
         }
 
         function setGuideMode(mode) {
@@ -1460,6 +1541,7 @@
         }
 
         function connectOnline() {
+            getGameAudioContext();
             const serverUrl = document.getElementById('serverUrl').value.trim();
             const roomId = document.getElementById('roomId').value.trim();
             if (!serverUrl || !roomId) {
@@ -1501,6 +1583,10 @@
         }
 
         function handleOnlineMessage(message) {
+            if (message.type === 'sound') {
+                playRemoteSound(message);
+                return;
+            }
             if (message.type === 'joined') {
                 onlineConnected = true;
                 onlineClientId = message.clientId;
@@ -2275,6 +2361,7 @@
             updateSpinControl();
             whiteBall.vx = Math.cos(cueAngle) * speed;
             whiteBall.vy = Math.sin(cueAngle) * speed;
+            playCueStrikeSound(cuePower);
 
             ballMoving = true;
             allBallsStopped = false;
@@ -2435,6 +2522,9 @@
                 }
                 if (verticalSide || horizontalSide) ball.sideSpin *= 0.78;
             }
+            if (verticalSide || horizontalSide) {
+                playCushionSound(Math.max(Math.abs(incomingVx), Math.abs(incomingVy)));
+            }
         }
 
         function isAnyBallMoving() {
@@ -2463,6 +2553,7 @@
                         if (!pottedThisShot.includes(ball)) {
                             pottedThisShot.push(ball);
                             toRemove.push(ball);
+                            playPocketSound(ball);
                         }
                     }
                 });
@@ -2668,6 +2759,7 @@
                 const dvn = dvx * nx + dvy * ny;
 
                 if (dvn > 0) {
+                    playBallCollisionSound(dvn);
                     b1.vx -= dvn * nx;
                     b1.vy -= dvn * ny;
                     b2.vx += dvn * nx;

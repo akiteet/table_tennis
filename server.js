@@ -121,6 +121,23 @@ wss.on('connection', (ws) => {
         reason: message.reason,
         state: message.state
       }, ws);
+      return;
+    }
+
+    if (message.type === 'sound') {
+      if (!ws.roomId || !rooms.has(ws.roomId)) return;
+      const allowedSounds = new Set(['cue', 'ball', 'cushion', 'pocket']);
+      if (!allowedSounds.has(message.sound)) return;
+      const now = Date.now();
+      if (now - (ws.lastSoundAt || 0) < 8) return;
+      ws.lastSoundAt = now;
+      const room = rooms.get(ws.roomId);
+      broadcast(room, {
+        type: 'sound',
+        sound: message.sound,
+        intensity: Math.max(0, Math.min(100, Number(message.intensity) || 0)),
+        detail: message.detail === 'white' ? 'white' : 'color'
+      }, ws);
     }
   });
 
