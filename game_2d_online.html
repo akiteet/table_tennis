@@ -1202,13 +1202,13 @@
                 </div>
             </div>
             
-            <!-- 让杆面板 -->
+            <!-- 犯规后续处理面板 -->
             <div class="let-play-banner" id="letPlayPanel" style="display:none;">
                 <div class="title" id="letPlayTitle">对方犯规，请选择后续处理</div>
                 <div class="btn-group">
-                    <button class="btn-sm active" id="letPlayYes" onclick="letPlay(true)" style="display:none;">让犯规方继续击球</button>
-                    <button class="btn-sm" id="letPlayRestore" onclick="letPlayFromOriginal()" style="display:none;">还原重打</button>
-                    <button class="btn-sm" id="letPlayNo" onclick="letPlay(false)" style="display:none;">自己击球</button>
+                    <button class="btn-sm active" id="letPlayNo" onclick="takeShotAfterFoul()" style="display:none;">自己击球</button>
+                    <button class="btn-sm" id="letPlayYes" onclick="requireFoulPlayerContinue()" style="display:none;">犯规方继续（当前球位）</button>
+                    <button class="btn-sm" id="letPlayRestore" onclick="letPlayFromOriginal()" style="display:none;">还原原位重打</button>
                 </div>
             </div>
             
@@ -3006,17 +3006,17 @@
             const canDecide = canResolveFoulDecision();
             const showPanel = awaitingLetPlayDecision && canDecide;
             const title = document.getElementById('letPlayTitle');
-            const letPlayYes = document.getElementById('letPlayYes');
             const letPlayNo = document.getElementById('letPlayNo');
+            const letPlayYes = document.getElementById('letPlayYes');
             const letPlayRestore = document.getElementById('letPlayRestore');
 
+            const restoreNotice = canRestore ? '，或还原原位重打' : '';
             title.textContent = freeBallMode
-                ? '你已获得自由球，请决定自己击球或让杆'
-                : '未获得自由球，请决定自己击球或让杆';
-            letPlayYes.textContent = freeBallMode ? '让犯规方继续（自由球失效）' : '让犯规方继续击球';
+                ? `你已获得自由球：可自己击球、要求犯规方继续${restoreNotice}`
+                : `未获得自由球：可自己击球、要求犯规方继续${restoreNotice}`;
             letPlayNo.textContent = freeBallMode ? '自己击球（使用自由球）' : '自己击球';
-            letPlayYes.style.display = showPanel ? 'inline-block' : 'none';
             letPlayNo.style.display = showPanel ? 'inline-block' : 'none';
+            letPlayYes.style.display = showPanel ? 'inline-block' : 'none';
             letPlayRestore.style.display = showPanel && canRestore ? 'inline-block' : 'none';
             document.getElementById('letPlayPanel').style.display = showPanel ? 'block' : 'none';
         }
@@ -3052,7 +3052,8 @@
             showLetPlayPanel(lastFoulWasMiss && !!shotSnapshot);
             updateUI();
             const freeBallNotice = freeBallMode ? '获得自由球' : '未获得自由球';
-            showMessage(`系统裁判判罚：玩家${currentPlayer + 1}犯规（${foulType}）罚${lastFoulPenalty}分！玩家${otherPlayer + 1}${freeBallNotice}，请选择自己击球、让杆或还原重打`);
+            const restoreNotice = lastFoulWasMiss && shotSnapshot ? '、还原原位重打' : '';
+            showMessage(`系统裁判判罚：玩家${currentPlayer + 1}犯规（${foulType}）罚${lastFoulPenalty}分！玩家${otherPlayer + 1}${freeBallNotice}，请选择自己击球、犯规方从当前球位继续${restoreNotice}`);
         }
 
         function uniqueBalls(list) {
@@ -3394,29 +3395,30 @@
             broadcastState('skip-free-ball');
         }
 
-        function letPlay(decide) {
+        function takeShotAfterFoul() {
+            if (!canResolveFoulDecision()) {
+                showMessage('等待非犯规方选择');
+                return;
+            }
+            hideLetPlayPanel();
+            resetShotTracking();
+            endTurn({ preserveFreeBall: true });
+            broadcastState('take-shot-after-foul');
+        }
+
+        function requireFoulPlayerContinue() {
             if (!canResolveFoulDecision()) {
                 showMessage('等待非犯规方选择');
                 return;
             }
             const otherPlayer = 1 - currentPlayer;
             hideLetPlayPanel();
-
-            if (decide) {
-                showMessage(`玩家${otherPlayer + 1}选择让杆，玩家${currentPlayer + 1}继续击球`);
-                if (whiteBall) {
-                    whiteBall.vx = 0;
-                    whiteBall.vy = 0;
-                }
-                clearFreeBall();
-                setPhaseForNewVisit();
-                resetShotTracking();
-                updateUI();
-            } else {
-                resetShotTracking();
-                endTurn({ preserveFreeBall: true });
-            }
-            broadcastState('let-play');
+            clearFreeBall();
+            setPhaseForNewVisit();
+            resetShotTracking();
+            showMessage(`玩家${otherPlayer + 1}要求犯规方从当前球位继续，玩家${currentPlayer + 1}击球`);
+            updateUI();
+            broadcastState('foul-player-continue');
         }
 
         function letPlayFromOriginal() {
@@ -3425,7 +3427,7 @@
                 return;
             }
             if (!lastFoulWasMiss || !shotSnapshot) {
-                letPlay(true);
+                requireFoulPlayerContinue();
                 return;
             }
             const otherPlayer = 1 - currentPlayer;
