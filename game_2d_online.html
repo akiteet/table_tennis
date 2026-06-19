@@ -501,6 +501,67 @@
             cursor: not-allowed;
             transform: none;
         }
+        .spin-control {
+            width: 132px;
+            height: 132px;
+            margin: 12px auto 8px;
+            border-radius: 50%;
+            position: relative;
+            cursor: crosshair;
+            touch-action: none;
+            border: 3px solid #777;
+            background: radial-gradient(circle at 35% 30%, #fff 0%, #e4e4e4 45%, #b7b7b7 100%);
+            box-shadow: inset -8px -10px 18px rgba(0, 0, 0, 0.22), 0 5px 14px rgba(0, 0, 0, 0.4);
+        }
+        .spin-control::before,
+        .spin-control::after {
+            content: '';
+            position: absolute;
+            background: rgba(0, 0, 0, 0.2);
+            pointer-events: none;
+        }
+        .spin-control::before {
+            width: 1px;
+            height: 92%;
+            left: 50%;
+            top: 4%;
+        }
+        .spin-control::after {
+            width: 92%;
+            height: 1px;
+            left: 4%;
+            top: 50%;
+        }
+        .spin-handle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #c62828;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45);
+            pointer-events: none;
+        }
+        .spin-axis-label {
+            position: absolute;
+            color: #222;
+            font-size: 11px;
+            font-weight: 700;
+            pointer-events: none;
+        }
+        .spin-axis-label.top { top: 5px; left: 50%; transform: translateX(-50%); }
+        .spin-axis-label.bottom { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .spin-axis-label.left { left: 5px; top: 50%; transform: translateY(-50%); }
+        .spin-axis-label.right { right: 5px; top: 50%; transform: translateY(-50%); }
+        .spin-value {
+            min-height: 18px;
+            color: #d4a574;
+            font-size: 12px;
+            text-align: center;
+        }
         .btn-color {
             min-width: 46px;
             padding: 6px 8px;
@@ -619,6 +680,19 @@
                 <div class="direction-label"><span id="angleDisplay">0°</span></div>
                 <div class="direction-label" style="font-size:11px;color:#666;">←→ 1°步进 | Shift+←→ 0.1°微调</div>
             </div>
+        </div>
+
+        <div class="panel">
+            <div class="section-title">击球点</div>
+            <div class="spin-control" id="spinControl">
+                <span class="spin-axis-label top">高杆</span>
+                <span class="spin-axis-label bottom">低杆</span>
+                <span class="spin-axis-label left">左塞</span>
+                <span class="spin-axis-label right">右塞</span>
+                <div class="spin-handle" id="spinHandle"></div>
+            </div>
+            <div class="spin-value" id="spinValue">中心击球</div>
+            <button class="btn-sm" type="button" onclick="resetCueSpin()">复位击球点</button>
         </div>
     </div>
 
@@ -776,8 +850,16 @@
         // 球杆系统变量
         let cueAngle = 0;
         let cuePower = 0;
+        let cueSpinX = 0;
+        let cueSpinY = 0;
+        let activeShotSpinX = 0;
+        let activeShotSpinY = 0;
+        let activeShotAngle = 0;
+        let activeShotSpeed = 0;
+        let shotSpinApplied = false;
         let directionControlActive = false;
         let powerControlActive = false;
+        let spinControlActive = false;
 
         // 引导线系统变量
         let guideMode = 'short';
@@ -785,6 +867,9 @@
         const BASE_SHOT_SPEED = 12;
         const HIGH_POWER_BOOST = 2;
         const CUSHION_RESTITUTION = 0.82;
+        const TOP_SPIN_STRENGTH = 0.42;
+        const SIDE_SPIN_CUSHION_STRENGTH = 0.24;
+        const SIDE_SPIN_DECAY = 0.992;
         const REPLAY_FRAME_DURATION = 32;
         const REPLAY_CAPTURE_INTERVAL = 2;
 
@@ -1018,6 +1103,7 @@
                     y: ball.y,
                     vx: ball.vx,
                     vy: ball.vy,
+                    sideSpin: ball.sideSpin || 0,
                     color: ball.color,
                     type: ball.type,
                     points: ball.points,
@@ -1044,6 +1130,8 @@
                 frameStarter,
                 cueAngle,
                 cuePower,
+                cueSpinX,
+                cueSpinY,
                 guideMode,
                 shotAuthorityPlayer,
                 message: lastMessage
@@ -1130,6 +1218,7 @@
                 ball.id = data.id || ball.id;
                 ball.vx = data.vx || 0;
                 ball.vy = data.vy || 0;
+                ball.sideSpin = data.sideSpin || 0;
                 ball.name = data.name || '';
                 ball.defaultX = data.defaultX;
                 ball.defaultY = data.defaultY;
@@ -1153,6 +1242,8 @@
             frameStarter = state.frameStarter || 0;
             cueAngle = state.cueAngle || 0;
             cuePower = state.cuePower || 0;
+            cueSpinX = Number.isFinite(state.cueSpinX) ? state.cueSpinX : 0;
+            cueSpinY = Number.isFinite(state.cueSpinY) ? state.cueSpinY : 0;
             guideMode = state.guideMode || guideMode;
             shotAuthorityPlayer = state.shotAuthorityPlayer;
             freeBallTarget = state.freeBallTargetId ? balls.find(ball => ball.id === state.freeBallTargetId) || null : null;
@@ -1160,6 +1251,7 @@
             updatePowerGauge();
             updateDirectionHandle();
             updateAngleDisplay();
+            updateSpinControl();
             setGuideMode(guideMode);
             updateUI();
             syncLetPlayPanel();
@@ -1282,8 +1374,16 @@
 
             cueAngle = 0;
             cuePower = 0;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            activeShotSpinX = 0;
+            activeShotSpinY = 0;
+            activeShotAngle = 0;
+            activeShotSpeed = 0;
+            shotSpinApplied = false;
             updatePowerGauge();
             updateDirectionHandle();
+            updateSpinControl();
             updateUI();
             syncLetPlayPanel();
             
@@ -1295,7 +1395,7 @@
         }
 
         function createBall(x, y, color, type, points) {
-            return { id: 'ball-' + nextBallId++, x, y, vx: 0, vy: 0, color, type, points, name: '', defaultX: x, defaultY: y };
+            return { id: 'ball-' + nextBallId++, x, y, vx: 0, vy: 0, sideSpin: 0, color, type, points, name: '', defaultX: x, defaultY: y };
         }
 
         function getColorDefinition(name) {
@@ -1410,6 +1510,7 @@
         function initControls() {
             const directionControl = document.getElementById('directionControl');
             const powerContainer = document.getElementById('powerContainer');
+            const spinControl = document.getElementById('spinControl');
 
             // 方向控制
             directionControl.addEventListener('mousedown', (e) => {
@@ -1428,6 +1529,20 @@
             document.addEventListener('mouseup', () => {
                 directionControlActive = false;
                 powerControlActive = false;
+            });
+
+            spinControl.addEventListener('pointerdown', (e) => {
+                if (!canControlCurrentTurn() || isTableInMotion() || !gameStarted || awaitingLetPlayDecision) return;
+                spinControlActive = true;
+                updateSpinFromControl(e);
+                spinControl.setPointerCapture?.(e.pointerId);
+            });
+            document.addEventListener('pointermove', (e) => {
+                if (spinControlActive) updateSpinFromControl(e);
+            });
+            document.addEventListener('pointerup', () => {
+                if (spinControlActive) broadcastState('spin');
+                spinControlActive = false;
             });
 
             // 纵向力度控制
@@ -1497,6 +1612,47 @@
         function updatePowerGauge() {
             document.getElementById('powerGauge').style.height = `${cuePower}%`;
             document.getElementById('powerLabel').textContent = Math.round(cuePower);
+        }
+
+        function updateSpinFromControl(e) {
+            const control = document.getElementById('spinControl');
+            const rect = control.getBoundingClientRect();
+            const radius = Math.min(rect.width, rect.height) * 0.38;
+            let dx = e.clientX - (rect.left + rect.width / 2);
+            let dy = e.clientY - (rect.top + rect.height / 2);
+            const distance = Math.hypot(dx, dy);
+            if (distance > radius) {
+                dx = dx / distance * radius;
+                dy = dy / distance * radius;
+            }
+            cueSpinX = dx / radius;
+            cueSpinY = -dy / radius;
+            updateSpinControl();
+        }
+
+        function updateSpinControl() {
+            const handle = document.getElementById('spinHandle');
+            const value = document.getElementById('spinValue');
+            if (!handle || !value) return;
+            handle.style.left = `calc(50% + ${cueSpinX * 50}px)`;
+            handle.style.top = `calc(50% - ${cueSpinY * 50}px)`;
+
+            const labels = [];
+            if (Math.abs(cueSpinY) >= 0.08) {
+                labels.push(`${cueSpinY > 0 ? '高杆' : '低杆'} ${Math.round(Math.abs(cueSpinY) * 100)}%`);
+            }
+            if (Math.abs(cueSpinX) >= 0.08) {
+                labels.push(`${cueSpinX > 0 ? '右塞' : '左塞'} ${Math.round(Math.abs(cueSpinX) * 100)}%`);
+            }
+            value.textContent = labels.length ? labels.join(' · ') : '中心击球';
+        }
+
+        function resetCueSpin() {
+            if (!canControlCurrentTurn() || isTableInMotion() || awaitingLetPlayDecision) return;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            updateSpinControl();
+            broadcastState('spin-reset');
         }
 
         function handleCanvasClick(e) {
@@ -1572,6 +1728,15 @@
             shotSnapshot = captureShotSnapshot();
             shotContext = captureShotContext();
             startShotReplayCapture();
+            activeShotSpinX = cueSpinX;
+            activeShotSpinY = cueSpinY;
+            activeShotAngle = cueAngle;
+            activeShotSpeed = speed;
+            shotSpinApplied = false;
+            whiteBall.sideSpin = activeShotSpinX;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            updateSpinControl();
             whiteBall.vx = Math.cos(cueAngle) * speed;
             whiteBall.vy = Math.sin(cueAngle) * speed;
 
@@ -1637,6 +1802,7 @@
             balls.forEach(ball => {
                 ball.vx *= FRICTION;
                 ball.vy *= FRICTION;
+                ball.sideSpin = (ball.sideSpin || 0) * SIDE_SPIN_DECAY;
             });
 
             const maxSpeed = balls.reduce((max, ball) => Math.max(max, Math.hypot(ball.vx, ball.vy)), 0);
@@ -1699,19 +1865,39 @@
             });
 
             if (nearHole) return;
+            const incomingVx = ball.vx;
+            const incomingVy = ball.vy;
+            let verticalSide = 0;
+            let horizontalSide = 0;
             if (ball.x < BORDER + BALL_RADIUS && holeDirection.x < 0.5) {
                 ball.x = BORDER + BALL_RADIUS;
                 ball.vx *= -CUSHION_RESTITUTION;
+                verticalSide = -1;
             } else if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS && holeDirection.x > -0.5) {
                 ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
                 ball.vx *= -CUSHION_RESTITUTION;
+                verticalSide = 1;
             }
             if (ball.y < BORDER + BALL_RADIUS && holeDirection.y < 0.5) {
                 ball.y = BORDER + BALL_RADIUS;
                 ball.vy *= -CUSHION_RESTITUTION;
+                horizontalSide = -1;
             } else if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS && holeDirection.y > -0.5) {
                 ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
                 ball.vy *= -CUSHION_RESTITUTION;
+                horizontalSide = 1;
+            }
+
+            if (ball === whiteBall && Math.abs(ball.sideSpin || 0) > 0.001) {
+                if (verticalSide) {
+                    ball.vy += ball.sideSpin * Math.abs(incomingVx) *
+                        SIDE_SPIN_CUSHION_STRENGTH * verticalSide;
+                }
+                if (horizontalSide) {
+                    ball.vx -= ball.sideSpin * Math.abs(incomingVy) *
+                        SIDE_SPIN_CUSHION_STRENGTH * horizontalSide;
+                }
+                if (verticalSide || horizontalSide) ball.sideSpin *= 0.78;
             }
         }
 
@@ -1950,8 +2136,21 @@
                     b1.vy -= dvn * ny;
                     b2.vx += dvn * nx;
                     b2.vy += dvn * ny;
+
+                    if (!shotSpinApplied && (b1 === whiteBall || b2 === whiteBall)) {
+                        applyCueSpinAfterFirstCollision();
+                    }
                 }
             }
+        }
+
+        function applyCueSpinAfterFirstCollision() {
+            if (!whiteBall || shotSpinApplied) return;
+            const followVelocity = activeShotSpinY * activeShotSpeed * TOP_SPIN_STRENGTH;
+            whiteBall.vx += Math.cos(activeShotAngle) * followVelocity;
+            whiteBall.vy += Math.sin(activeShotAngle) * followVelocity;
+            whiteBall.sideSpin = activeShotSpinX;
+            shotSpinApplied = true;
         }
 
         function isSpotOccupied(x, y) {
