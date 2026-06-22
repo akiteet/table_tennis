@@ -71,6 +71,11 @@ wss.on('connection', (ws) => {
   ws.clientId = String(nextClientId++);
   ws.roomId = null;
   ws.player = null;
+  ws.isAlive = true;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
 
   ws.on('message', (raw) => {
     let message;
@@ -156,6 +161,21 @@ wss.on('connection', (ws) => {
       notice: ws.player < 2 ? `玩家${ws.player + 1}已离开房间` : '一名观战者已离开房间'
     });
   });
+});
+
+const heartbeatInterval = setInterval(() => {
+  for (const client of wss.clients) {
+    if (client.isAlive === false) {
+      client.terminate();
+      continue;
+    }
+    client.isAlive = false;
+    client.ping();
+  }
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
 });
 
 server.listen(PORT, () => {

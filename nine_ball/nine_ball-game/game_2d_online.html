@@ -408,9 +408,9 @@
     <nav class="top-nav" aria-label="页面导航">
         <div class="nav-title">九球台球 - 联机对战</div>
         <div class="nav-links">
-            <a class="nav-link" href="/game_2d.html">本地游戏</a>
-            <a class="nav-link active" href="/game_2d_online.html">联机游戏</a>
-            <a class="nav-link" href="/game_2d_rules.html">规则说明</a>
+            <a class="nav-link" href="game_2d.html">本地游戏</a>
+            <a class="nav-link active" href="game_2d_online.html">联机游戏</a>
+            <a class="nav-link" href="game_2d_rules.html">规则说明</a>
         </div>
     </nav>
 
@@ -420,7 +420,7 @@
             <h2>联机对战</h2>
             <div class="form-group">
                 <label for="serverUrl">服务器地址</label>
-                <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="ws://localhost:3000">
+                <input type="text" id="serverUrl" placeholder="ws://localhost:3000 或 wss://服务名.onrender.com">
             </div>
             <div class="form-group">
                 <label for="roomId">房间号</label>
@@ -810,12 +810,21 @@
             status.className = 'lobby-status' + (type ? ' ' + type : '');
         }
 
+        function getDefaultServerUrl() {
+            if ((location.protocol === 'http:' || location.protocol === 'https:')
+                && !location.hostname.endsWith('github.io')) {
+                const socketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${socketProtocol}//${location.host}`;
+            }
+            return 'ws://localhost:3000';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const room = urlParams.get('room');
             const server = urlParams.get('server');
             if (room) document.getElementById('roomId').value = room;
-            if (server) document.getElementById('serverUrl').value = server;
+            document.getElementById('serverUrl').value = server || getDefaultServerUrl();
         });
 
         // ============================================================

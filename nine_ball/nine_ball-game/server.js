@@ -119,6 +119,11 @@ wss.on('connection', (ws) => {
   ws.clientId = String(nextClientId++);
   ws.roomId = null;
   ws.player = null;
+  ws.isAlive = true;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
 
   ws.on('message', (raw) => {
     let message;
@@ -185,7 +190,7 @@ wss.on('connection', (ws) => {
         state.phase = 'break';
         room.gameState = state;
 
-        broadcast(room, {
+        send(room.players[0], {
           type: 'game-started',
           state: state,
           yourTurn: true,
@@ -213,12 +218,6 @@ wss.on('connection', (ws) => {
 
       room.gameState = newState;
       room.currentTurn = 1 - room.currentTurn;
-
-      broadcast(room, {
-        type: 'state-update',
-        state: newState,
-        yourTurn: false
-      }, ws);
 
       send(ws, {
         type: 'state-update',
@@ -289,6 +288,21 @@ wss.on('connection', (ws) => {
       rooms.delete(ws.roomId);
     }
   });
+});
+
+const heartbeatInterval = setInterval(() => {
+  for (const client of wss.clients) {
+    if (client.isAlive === false) {
+      client.terminate();
+      continue;
+    }
+    client.isAlive = false;
+    client.ping();
+  }
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
 });
 
 server.listen(PORT, () => {
