@@ -34,151 +34,78 @@
             border-color: rgba(212,165,116,0.78); color: #fff;
         }
 
-        /* ===== LOBBY ===== */
-        .lobby-shell {
-            flex: 1; display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        .online-bar {
+            flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.65fr) auto auto auto;
+            gap: 7px;
+            align-items: end;
+            padding: 7px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(24,24,24,0.94);
         }
-        .connect-panel {
-            background: linear-gradient(180deg, rgba(50, 30, 15, 0.8), rgba(30, 20, 10, 0.9));
-            border-radius: 15px;
-            border: 2px solid #5a3a22;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            padding: 30px;
-            max-width: 500px;
-            width: 100%;
-        }
-        .connect-panel h2 {
-            font-size: 24px;
-            color: #d4a574;
-            text-align: center;
-            margin: 0 0 20px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            font-size: 14px;
-            color: #aaa;
-            margin-bottom: 8px;
-        }
-        .form-group input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 16px;
-            border-radius: 8px;
-            border: 2px solid #555;
-            background: rgba(0, 0, 0, 0.3);
-            color: white;
-        }
-        .form-group input[type="text"]:focus {
-            outline: none;
-            border-color: #d4a574;
-        }
-        .btn-group {
+        .online-field {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 20px;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
         }
-        .btn-group button {
-            padding: 12px 24px;
-            font-size: 16px;
+        .online-field label {
+            color: #c9b99e;
+            font-size: 12px;
+        }
+        .online-field input {
+            min-width: 0;
+            min-height: 30px;
+            padding: 4px 8px;
+            border: 1px solid rgba(212,165,116,0.45);
+            border-radius: 5px;
+            outline: none;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 14px;
+        }
+        .online-field input:focus { border-color: #d4a574; }
+        .online-btn {
+            min-height: 30px;
+            margin: 0;
+            padding: 4px 12px;
+            border: 1px solid #8a5a33;
+            border-radius: 5px;
+            background: #4a2f15;
+            color: #fff;
             cursor: pointer;
-            background: linear-gradient(180deg, #6b4423, #4a2f15);
-            color: white;
-            border: 2px solid #8a5a33;
-            border-radius: 8px;
-            font-weight: 500;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
+            white-space: nowrap;
         }
-        .btn-group button:hover {
-            background: linear-gradient(180deg, #7a5a33, #5a3f25);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-            transform: translateY(-1px);
-        }
-        .btn-group button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .btn-connect {
-            background: linear-gradient(180deg, #2ecc71, #27ae60) !important;
-            border-color: #2ecc71 !important;
-        }
-        .btn-connect:hover {
-            background: linear-gradient(180deg, #3ddc84, #2ecc71) !important;
-        }
-        .btn-disconnect {
-            background: linear-gradient(180deg, #e74c3c, #c0392b) !important;
-            border-color: #e74c3c !important;
-        }
-        .btn-disconnect:hover {
-            background: linear-gradient(180deg, #ff6b6b, #e74c3c) !important;
+        .online-btn:hover { background: #634222; }
+        .online-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .online-status {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            min-height: 22px;
         }
         .lobby-status {
-            text-align: center;
-            font-size: 14px;
-            color: #aaa;
-            margin-top: 20px;
-            min-height: 20px;
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 0 9px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+            color: #ccc;
+            font-size: 13px;
         }
         .lobby-status.connected { color: #2ecc71; }
         .lobby-status.error { color: #e74c3c; }
-        .room-info {
-            text-align: center;
-            font-size: 14px;
-            color: #d4a574;
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-        .player-info {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-        }
-        .player {
-            text-align: center;
-        }
-        .player .label {
-            font-size: 12px;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .player .name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #e0d0b0;
-            margin-top: 5px;
-        }
-        .player.active .name { color: #2ecc71; }
-        .lobby-tips {
-            margin-top: 20px;
-            font-size: 12px;
-            color: #666;
-            text-align: center;
-            line-height: 1.5;
-        }
 
         /* ===== GAME ===== */
         #gameContainer {
             flex: 1; min-height: 0;
-            display: none;
+            display: flex;
             flex-direction: column;
         }
-        #gameContainer.visible { display: flex; }
         .app-shell {
             flex: 1 1 auto; min-height: 0;
             display: grid;
@@ -402,6 +329,11 @@
         .guide-btn.active { color: #d4a574; border-color: #8a5a33; background: rgba(180,120,60,0.15); }
 
         .hidden { display: none !important; }
+        @media (max-width: 900px) {
+            body { overflow: auto; }
+            .online-bar { grid-template-columns: 1fr 1fr; }
+            .online-status { grid-column: 1 / -1; }
+        }
     </style>
 </head>
 <body>
@@ -414,44 +346,25 @@
         </div>
     </nav>
 
-    <!-- ===== 大厅 ===== -->
-    <div id="lobbyContainer" class="lobby-shell">
-        <div class="connect-panel">
-            <h2>联机对战</h2>
-            <div class="form-group">
-                <label for="serverUrl">服务器地址</label>
-                <input type="text" id="serverUrl" placeholder="ws://localhost:3000 或 wss://服务名.onrender.com">
-            </div>
-            <div class="form-group">
-                <label for="roomId">房间号</label>
-                <input type="text" id="roomId" placeholder="输入房间号">
-            </div>
-            <div class="btn-group">
-                <button id="connectBtn" class="btn-connect" onclick="connectToRoom()">连接房间</button>
-                <button id="disconnectBtn" class="btn-disconnect hidden" onclick="disconnectFromRoom()">断开连接</button>
-            </div>
-            <div id="lobbyStatus" class="lobby-status"></div>
-            <div id="roomInfo" class="room-info hidden">
-                <div>房间: <span id="currentRoom"></span></div>
-                <div>玩家: <span id="currentPlayerLabel"></span></div>
-            </div>
-            <div id="playerInfo" class="player-info hidden">
-                <div class="player" id="lobbyPlayer1">
-                    <div class="label">玩家 1</div>
-                    <div class="name">等待中...</div>
-                </div>
-                <div class="player" id="lobbyPlayer2">
-                    <div class="label">玩家 2</div>
-                    <div class="name">等待中...</div>
-                </div>
-            </div>
-            <div class="lobby-tips">
-                提示：输入相同的房间号可以加入同一局游戏。<br>
-                第一个进入的玩家为玩家1，第二个进入的为玩家2。<br>
-                GitHub Pages 只能托管静态网页，联机服务器需要另外部署。
-            </div>
+    <section class="online-bar" aria-label="联机房间">
+        <div class="online-field">
+            <label for="serverUrl">服务器</label>
+            <input type="text" id="serverUrl" placeholder="wss://服务名.onrender.com">
         </div>
-    </div>
+        <div class="online-field">
+            <label for="roomId">房间号</label>
+            <input type="text" id="roomId" maxlength="32" placeholder="例如 nine-ball-001">
+        </div>
+        <button id="connectBtn" class="online-btn" onclick="connectToRoom()">连接房间</button>
+        <button id="disconnectBtn" class="online-btn hidden" onclick="disconnectFromRoom()">断开</button>
+        <button id="copyInviteBtn" class="online-btn" onclick="copyInviteLink()">复制邀请链接</button>
+        <div class="online-status">
+            <span id="lobbyStatus" class="lobby-status">未连接</span>
+            <span id="currentPlayerLabel" class="lobby-status">身份：未分配</span>
+            <span id="currentRoom" class="lobby-status">房间：-</span>
+            <span id="playersStatus" class="lobby-status">玩家：0/2</span>
+        </div>
+    </section>
 
     <!-- ===== 游戏 ===== -->
     <div id="gameContainer">
@@ -555,7 +468,7 @@
                         <button class="console-btn" id="pushBackBtn" onclick="pushOutTakeShot()" style="display:none;">接手击球</button>
                         <button class="console-btn" id="pushTakeBtn" onclick="pushOutForceBack()" style="display:none;">推回对方</button>
                         <button class="console-btn" id="replayBtn" onclick="replayLastShot()" disabled>回放</button>
-                        <button class="console-btn reset" onclick="resetGame()">重置</button>
+                        <button class="console-btn reset" id="resetBtn" onclick="resetGame()">重置</button>
                         <button class="console-btn shoot" id="shootBtn" onclick="shoot()">出杆</button>
                     </div>
                 </div>
@@ -573,8 +486,11 @@
         let clientId = '';
         let myPlayerNumber = -1;
         let isConnected = false;
-        let onlineMode = false;
+        let onlineMode = true;
         let isMyTurn = false;
+        let applyingRemoteState = false;
+        let shotAuthorityPlayer = null;
+        let lastStateBroadcastAt = 0;
 
         // ============================================================
         //  GAME VARIABLES
@@ -617,9 +533,11 @@
         let consecutiveFouls = [0, 0];
         let cushionContactThisShot = false;
         let breakCushionCount = 0;
+        let breakCushionBalls = new Set();
         let pushOutAvailable = false;
         let isPushOutShot = false;
         let awaitingPushOutDecision = false;
+        let pushOutDecisionPlayer = null;
 
         let cueAngle = 0;
         let cuePower = 0;
@@ -657,151 +575,246 @@
         //  ONLINE FUNCTIONS
         // ============================================================
         function connectToRoom() {
+            getGameAudioContext();
             const serverUrl = document.getElementById('serverUrl').value.trim();
             onlineRoomId = document.getElementById('roomId').value.trim();
             if (!serverUrl) { showLobbyStatus('请输入服务器地址', 'error'); return; }
             if (!onlineRoomId) { showLobbyStatus('请输入房间号', 'error'); return; }
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                ws.close();
+            }
             try {
+                showLobbyStatus('连接中...', '');
                 ws = new WebSocket(serverUrl);
                 ws.onopen = () => {
-                    isConnected = true;
-                    showLobbyStatus('正在连接房间...', '');
+                    showLobbyStatus('正在加入房间...', '');
                     ws.send(JSON.stringify({ type: 'join', roomId: onlineRoomId }));
                 };
-                ws.onmessage = (event) => { handleOnlineMessage(JSON.parse(event.data)); };
-                ws.onclose = () => {
-                    isConnected = false;
-                    showLobbyStatus('连接已断开', 'error');
-                    if (onlineMode) { onDisconnectedFromGame(); }
-                    else { updateLobbyUI(false); }
+                ws.onmessage = (event) => {
+                    try {
+                        handleOnlineMessage(JSON.parse(event.data));
+                    } catch (error) {
+                        showLobbyStatus('收到无效的服务器消息', 'error');
+                    }
                 };
+                ws.onclose = onDisconnectedFromGame;
                 ws.onerror = () => { showLobbyStatus('连接失败，请检查服务器地址', 'error'); };
-            } catch (error) { showLobbyStatus('无效的服务器地址', 'error'); }
+            } catch (error) {
+                showLobbyStatus('无效的服务器地址', 'error');
+            }
         }
 
         function disconnectFromRoom() {
-            if (ws) { ws.close(); ws = null; }
-            isConnected = false;
-            if (onlineMode) { onDisconnectedFromGame(); }
-            updateLobbyUI(false);
-            showLobbyStatus('已断开连接', '');
+            if (ws) ws.close();
+            else onDisconnectedFromGame();
         }
 
         function onDisconnectedFromGame() {
-            onlineMode = false;
+            ws = null;
+            isConnected = false;
             myPlayerNumber = -1;
             isMyTurn = false;
-            document.getElementById('gameContainer').classList.remove('visible');
-            document.getElementById('lobbyContainer').style.display = '';
+            shotAuthorityPlayer = null;
             document.getElementById('turnChip').style.display = 'none';
+            document.getElementById('currentPlayerLabel').textContent = '身份：未分配';
+            document.getElementById('currentRoom').textContent = '房间：-';
+            document.getElementById('playersStatus').textContent = '玩家：0/2';
+            updateLobbyUI(false);
+            showLobbyStatus('连接已断开', 'error');
+            updateUI();
         }
 
         function handleOnlineMessage(data) {
             switch (data.type) {
+                case 'sound':
+                    playRemoteSound(data);
+                    break;
                 case 'joined':
                     clientId = data.clientId;
                     myPlayerNumber = data.player;
-                    showLobbyStatus('已连接到房间', 'connected');
+                    isConnected = true;
+                    showLobbyStatus('已连接', 'connected');
                     updateLobbyUI(true);
-                    document.getElementById('currentRoom').textContent = onlineRoomId;
-                    document.getElementById('currentPlayerLabel').textContent = '玩家 ' + (myPlayerNumber + 1);
+                    document.getElementById('currentRoom').textContent = '房间：' + onlineRoomId;
+                    document.getElementById('currentPlayerLabel').textContent = '身份：玩家' + (myPlayerNumber + 1);
+                    updateLobbyPlayers(data.players);
                     break;
                 case 'room-update':
                     updateLobbyPlayers(data.players);
                     if (data.notice) showLobbyStatus(data.notice, '');
                     break;
                 case 'game-started':
-                    onlineMode = true;
                     myPlayerNumber = data.player;
-                    isMyTurn = data.yourTurn;
-                    initGame();
-                    applyServerState(data.state);
-                    document.getElementById('lobbyContainer').style.display = 'none';
-                    document.getElementById('gameContainer').classList.add('visible');
-                    if (data.yourTurn) showMessage('你的回合：调整方向和力度后点击"出杆"');
-                    else showMessage('等待对手击球...');
+                    applyServerState(data.state, 'game-started');
+                    showMessage(isMyTurn ? '你的回合：请放置白球' : '等待玩家1放置白球');
+                    break;
+                case 'state':
+                    if (data.state && data.state.partial === 'motion') {
+                        applyMotionState(data.state);
+                    } else {
+                        applyServerState(data.state, data.reason);
+                    }
                     break;
                 case 'state-update':
-                    applyServerState(data.state);
-                    isMyTurn = data.yourTurn;
-                    if (!data.yourTurn) {
-                        document.getElementById('shootBtn').disabled = true;
-                        showMessage('对手的回合，请等待...');
-                    } else {
-                        if (!isPlacingBall) document.getElementById('shootBtn').disabled = false;
-                        if (!freeBallMode && !isPlacingBall) showMessage('你的回合');
-                    }
-                    updateUI();
+                    applyServerState(data.state, 'legacy-state');
                     break;
                 case 'error':
-                    showLobbyStatus(data.message, 'error');
+                    showLobbyStatus(data.message || '服务器错误', 'error');
                     break;
             }
         }
 
-        function sendGameStateToServer() {
-            if (!ws || !onlineMode) return;
-            const state = {
-                balls: balls.map(b => ({ number: b.number, type: b.type, x: b.x, y: b.y, vx: b.vx, vy: b.vy })),
-                scores: scores, currentPlayer: currentPlayer, phase: phase,
-                currentBreak: currentBreak, consecutiveFouls: consecutiveFouls,
-                freeBallMode: freeBallMode, gameStarted: gameStarted
-            };
-            ws.send(JSON.stringify({ type: 'turn-done', state: state }));
+        function getControlPlayer() {
+            return awaitingPushOutDecision && pushOutDecisionPlayer !== null
+                ? pushOutDecisionPlayer
+                : currentPlayer;
         }
 
-        function applyServerState(state) {
-            if (!state || !state.balls) return;
+        function serializeGameState() {
+            return {
+                balls: balls.map(ball => ({
+                    number: ball.number,
+                    type: ball.type,
+                    x: ball.x,
+                    y: ball.y,
+                    vx: ball.vx,
+                    vy: ball.vy,
+                    sideSpin: ball.sideSpin || 0
+                })),
+                scores: [...scores],
+                currentPlayer,
+                controlPlayer: getControlPlayer(),
+                currentBreak,
+                phase,
+                consecutiveFouls: [...consecutiveFouls],
+                freeBallMode,
+                freeBallTargetNumber: freeBallTarget ? freeBallTarget.number : null,
+                isPlacingBall,
+                ballMoving,
+                allBallsStopped,
+                gameStarted,
+                pushOutAvailable,
+                awaitingPushOutDecision,
+                pushOutDecisionPlayer,
+                frameStarter,
+                shotAuthorityPlayer,
+                message: lastMessage
+            };
+        }
+
+        function serializeMotionState() {
+            return {
+                partial: 'motion',
+                balls: balls.map(ball => ({
+                    number: ball.number,
+                    type: ball.type,
+                    x: ball.x,
+                    y: ball.y,
+                    vx: ball.vx,
+                    vy: ball.vy
+                })),
+                ballMoving,
+                allBallsStopped,
+                shotAuthorityPlayer,
+                message: lastMessage
+            };
+        }
+
+        function sendGameStateToServer(reason) {
+            if (!isConnected || applyingRemoteState || !ws || ws.readyState !== WebSocket.OPEN) return;
+            lastStateBroadcastAt = Date.now();
+            ws.send(JSON.stringify({
+                type: 'state',
+                reason: reason || 'state-update',
+                state: serializeGameState()
+            }));
+        }
+
+        function sendMotionStateToServer() {
+            if (!isConnected || applyingRemoteState || myPlayerNumber !== shotAuthorityPlayer
+                || !ws || ws.readyState !== WebSocket.OPEN) return;
+            const now = Date.now();
+            if (now - lastStateBroadcastAt < 50) return;
+            lastStateBroadcastAt = now;
+            ws.send(JSON.stringify({ type: 'state', reason: 'shot-update', state: serializeMotionState() }));
+        }
+
+        function applyServerState(state, reason) {
+            if (!state || !Array.isArray(state.balls)) return;
+            applyingRemoteState = true;
             balls = [];
             whiteBall = null;
             state.balls.forEach(data => {
                 const ball = createBall(data.x, data.y, BALL_COLORS[data.number] || '#ffffff', data.type, data.number);
                 ball.vx = data.vx || 0;
                 ball.vy = data.vy || 0;
+                ball.sideSpin = data.sideSpin || 0;
                 balls.push(ball);
                 if (data.type === 'white') whiteBall = ball;
             });
-            scores = state.scores || [0, 0];
-            currentPlayer = state.currentPlayer || 0;
+            scores = Array.isArray(state.scores) ? [...state.scores] : [0, 0];
+            currentPlayer = state.currentPlayer === 1 ? 1 : 0;
             phase = state.phase || 'normal';
             currentBreak = state.currentBreak || 0;
-            consecutiveFouls = state.consecutiveFouls || [0, 0];
-            freeBallMode = state.freeBallMode || false;
-            gameStarted = state.gameStarted || false;
-            isPlacingBall = freeBallMode && isMyTurn;
-            ballMoving = false;
-            allBallsStopped = true;
-            if (!isPlacingBall) freeBallTarget = null;
-            if (gameStarted && onlineMode) document.getElementById('turnChip').style.display = '';
+            consecutiveFouls = Array.isArray(state.consecutiveFouls) ? [...state.consecutiveFouls] : [0, 0];
+            freeBallMode = !!state.freeBallMode;
+            isPlacingBall = !!state.isPlacingBall;
+            ballMoving = !!state.ballMoving;
+            allBallsStopped = state.allBallsStopped !== false;
+            gameStarted = !!state.gameStarted;
+            pushOutAvailable = !!state.pushOutAvailable;
+            awaitingPushOutDecision = !!state.awaitingPushOutDecision;
+            pushOutDecisionPlayer = state.pushOutDecisionPlayer === 0 || state.pushOutDecisionPlayer === 1
+                ? state.pushOutDecisionPlayer
+                : null;
+            frameStarter = state.frameStarter === 1 ? 1 : 0;
+            shotAuthorityPlayer = state.shotAuthorityPlayer === 0 || state.shotAuthorityPlayer === 1
+                ? state.shotAuthorityPlayer
+                : null;
+            freeBallTarget = state.freeBallTargetNumber === null || state.freeBallTargetNumber === undefined
+                ? null
+                : balls.find(ball => ball.number === state.freeBallTargetNumber) || null;
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
+            if (reason === 'shot-start') startShotReplayCapture();
+            if (reason === 'shot-result' || reason === 'push-out-decision' || reason === 'rack-won') {
+                finalizeShotReplayCapture();
+            }
+            if (state.message) showMessage(state.message);
+            applyingRemoteState = false;
             updateUI();
+        }
+
+        function applyMotionState(state) {
+            if (!state || !Array.isArray(state.balls)) return;
+            applyingRemoteState = true;
+            const incoming = new Map(state.balls.map(ball => [ball.number, ball]));
+            balls = balls.filter(ball => incoming.has(ball.number));
+            balls.forEach(ball => {
+                const data = incoming.get(ball.number);
+                ball.x = data.x;
+                ball.y = data.y;
+                ball.vx = data.vx || 0;
+                ball.vy = data.vy || 0;
+            });
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+            ballMoving = !!state.ballMoving;
+            allBallsStopped = state.allBallsStopped !== false;
+            shotAuthorityPlayer = state.shotAuthorityPlayer;
+            if (state.message) showMessage(state.message);
+            captureShotReplayFrame();
+            applyingRemoteState = false;
         }
 
         function updateLobbyUI(connected) {
             document.getElementById('connectBtn').classList.toggle('hidden', connected);
             document.getElementById('disconnectBtn').classList.toggle('hidden', !connected);
-            document.getElementById('roomInfo').classList.toggle('hidden', !connected);
-            document.getElementById('playerInfo').classList.toggle('hidden', !connected);
             document.getElementById('serverUrl').disabled = connected;
             document.getElementById('roomId').disabled = connected;
         }
 
         function updateLobbyPlayers(players) {
-            const p1 = document.getElementById('lobbyPlayer1');
-            const p2 = document.getElementById('lobbyPlayer2');
-            if (players && players.length >= 1) {
-                p1.querySelector('.name').textContent = players[0] ? '已就绪' : '等待中...';
-                p1.classList.toggle('active', players[0] && myPlayerNumber === 0);
-            } else {
-                p1.querySelector('.name').textContent = '等待中...';
-                p1.classList.remove('active');
-            }
-            if (players && players.length >= 2) {
-                p2.querySelector('.name').textContent = players[1] ? '已就绪' : '等待中...';
-                p2.classList.toggle('active', players[1] && myPlayerNumber === 1);
-            } else {
-                p2.querySelector('.name').textContent = '等待中...';
-                p2.classList.remove('active');
-            }
+            const count = Array.isArray(players) ? players.filter(Boolean).length : 0;
+            document.getElementById('playersStatus').textContent = '玩家：' + count + '/2';
         }
 
         function showLobbyStatus(message, type) {
@@ -811,20 +824,41 @@
         }
 
         function getDefaultServerUrl() {
-            if ((location.protocol === 'http:' || location.protocol === 'https:')
-                && !location.hostname.endsWith('github.io')) {
+            if (location.hostname.endsWith('github.io')) {
+                return 'wss://nine-ball.onrender.com';
+            }
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
                 const socketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
                 return `${socketProtocol}//${location.host}`;
             }
             return 'ws://localhost:3000';
         }
 
+        function makeRoomId() {
+            return 'room-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        async function copyInviteLink() {
+            const roomInput = document.getElementById('roomId');
+            if (!roomInput.value.trim()) roomInput.value = makeRoomId();
+            const url = new URL(location.href);
+            url.searchParams.set('room', roomInput.value.trim());
+            url.searchParams.set('server', document.getElementById('serverUrl').value.trim());
+            try {
+                await navigator.clipboard.writeText(url.toString());
+                showLobbyStatus('邀请链接已复制', 'connected');
+            } catch (error) {
+                showLobbyStatus('复制失败，请复制浏览器地址', 'error');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const room = urlParams.get('room');
             const server = urlParams.get('server');
-            if (room) document.getElementById('roomId').value = room;
+            document.getElementById('roomId').value = room || makeRoomId();
             document.getElementById('serverUrl').value = server || getDefaultServerUrl();
+            updateLobbyUI(false);
         });
 
         // ============================================================
@@ -864,6 +898,7 @@
             const strength = Math.max(0.15, Math.min(1, powerPercent / 100));
             playTone(420, 190, 0.032, 0.045 + strength * 0.075, 'triangle');
             playTone(2400, 1250, 0.012, 0.018 + strength * 0.028, 'sine');
+            sendOnlineSound('cue', powerPercent, 'white');
         }
 
         function playBallCollisionSound(impactSpeed) {
@@ -874,6 +909,7 @@
             const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
             playTone(1750 + strength * 520, 980, 0.018, 0.03 + strength * 0.075, 'sine');
             playTone(3100, 1800, 0.008, 0.008 + strength * 0.018, 'triangle');
+            sendOnlineSound('ball', strength * 100, 'color');
         }
 
         function playCushionSound(impactSpeed) {
@@ -884,12 +920,34 @@
             const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
             playTone(520, 245, 0.034, 0.018 + strength * 0.048, 'triangle');
             playTone(1350, 720, 0.012, 0.008 + strength * 0.016, 'sine');
+            sendOnlineSound('cushion', strength * 100, 'color');
         }
 
         function playPocketSound(ball) {
             const pitch = ball.type === 'white' ? 115 : 145;
             playTone(pitch, 55, 0.16, 0.085, 'sine');
             playTone(820, 280, 0.045, 0.032, 'triangle');
+            sendOnlineSound('pocket', 70, ball.type === 'white' ? 'white' : 'color');
+        }
+
+        function sendOnlineSound(sound, intensity, detail) {
+            if (!isConnected || myPlayerNumber !== shotAuthorityPlayer
+                || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'sound', sound, intensity, detail }));
+        }
+
+        function playRemoteSound(data) {
+            const strength = Math.max(0.1, Math.min(1, (Number(data.intensity) || 50) / 100));
+            if (data.sound === 'cue') {
+                playTone(420, 190, 0.032, 0.045 + strength * 0.075, 'triangle');
+                playTone(2400, 1250, 0.012, 0.018 + strength * 0.028, 'sine');
+            } else if (data.sound === 'ball') {
+                playTone(1750 + strength * 520, 980, 0.018, 0.03 + strength * 0.075, 'sine');
+            } else if (data.sound === 'cushion') {
+                playTone(520, 245, 0.034, 0.018 + strength * 0.048, 'triangle');
+            } else if (data.sound === 'pocket') {
+                playTone(data.detail === 'white' ? 115 : 145, 55, 0.16, 0.085, 'sine');
+            }
         }
 
         function setGuideMode(mode) {
@@ -1005,27 +1063,13 @@
             replayFrameIndex = 0;
             replayLastFrameAt = 0;
             consecutiveFouls = [0, 0];
+            breakCushionCount = 0;
+            breakCushionBalls.clear();
             pushOutAvailable = false;
-
-            if (!onlineMode) {
-                whiteBall = createBall(D_ZONE_CENTER_X, TABLE_HEIGHT / 2, '#ffffff', 'white', 0);
-                balls.push(whiteBall);
-                const rackX = BORDER + TABLE_INNER_LENGTH * 0.75;
-                const rackY = TABLE_HEIGHT / 2;
-                const spacing = BALL_RADIUS * 2.05;
-                const rackPositions = [
-                    { row: 0, col: 0 }, { row: 1, col: -1 }, { row: 1, col: 1 },
-                    { row: 2, col: -2 }, { row: 2, col: 0 }, { row: 2, col: 2 },
-                    { row: 3, col: -1 }, { row: 3, col: 1 }, { row: 4, col: 0 }
-                ];
-                const ballNumbers = [1, 2, 3, 4, 9, 5, 6, 7, 8];
-                rackPositions.forEach((pos, index) => {
-                    const x = rackX + pos.row * spacing * 0.866;
-                    const y = rackY + pos.col * spacing / 2;
-                    const ballNumber = ballNumbers[index];
-                    balls.push(createBall(x, y, BALL_COLORS[ballNumber], 'numbered', ballNumber));
-                });
-            }
+            awaitingPushOutDecision = false;
+            pushOutDecisionPlayer = null;
+            shotAuthorityPlayer = null;
+            setupRackBalls();
 
             cueAngle = 0;
             cuePower = 0;
@@ -1040,7 +1084,28 @@
             updateDirectionHandle();
             updateSpinControl();
             updateUI();
-            if (!onlineMode) showMessage('玩家1：请在D区点击放置白球');
+            showMessage(isConnected ? '玩家1：请在发球线后放置白球' : '请先连接联机房间');
+        }
+
+        function setupRackBalls() {
+            balls = [];
+            whiteBall = createBall(D_ZONE_CENTER_X, TABLE_HEIGHT / 2, '#ffffff', 'white', 0);
+            balls.push(whiteBall);
+            const rackX = BORDER + TABLE_INNER_LENGTH * 0.75;
+            const rackY = TABLE_HEIGHT / 2;
+            const spacing = BALL_RADIUS * 2.05;
+            const rackPositions = [
+                { row: 0, col: 0 }, { row: 1, col: -1 }, { row: 1, col: 1 },
+                { row: 2, col: -2 }, { row: 2, col: 0 }, { row: 2, col: 2 },
+                { row: 3, col: -1 }, { row: 3, col: 1 }, { row: 4, col: 0 }
+            ];
+            const ballNumbers = [1, 2, 3, 4, 9, 5, 6, 7, 8];
+            rackPositions.forEach((pos, index) => {
+                const x = rackX + pos.row * spacing * 0.866;
+                const y = rackY + pos.col * spacing / 2;
+                const ballNumber = ballNumbers[index];
+                balls.push(createBall(x, y, BALL_COLORS[ballNumber], 'numbered', ballNumber));
+            });
         }
 
         function createBall(x, y, color, type, number) {
@@ -1106,7 +1171,7 @@
             const spinControl = document.getElementById('spinControl');
 
             directionControl.addEventListener('mousedown', (e) => {
-                if (isTableInMotion() || !gameStarted) return;
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
                 directionControlActive = true;
                 updateDirectionFromControl(e);
             });
@@ -1120,7 +1185,7 @@
             });
 
             spinControl.addEventListener('pointerdown', (e) => {
-                if (isTableInMotion() || !gameStarted) return;
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
                 spinControlActive = true;
                 updateSpinFromControl(e);
                 spinControl.setPointerCapture?.(e.pointerId);
@@ -1131,13 +1196,13 @@
             document.addEventListener('pointerup', () => { spinControlActive = false; });
 
             powerContainer.addEventListener('mousedown', (e) => {
-                if (isTableInMotion() || !gameStarted) return;
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
                 powerControlActive = true;
                 updatePowerFromGauge(e);
             });
 
             document.addEventListener('keydown', (e) => {
-                if (isTableInMotion() || !gameStarted) return;
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
                 const step = e.shiftKey ? 0.001745 : 0.01745;
                 if (e.key === 'ArrowLeft') cueAngle -= step;
                 if (e.key === 'ArrowRight') cueAngle += step;
@@ -1210,13 +1275,21 @@
         }
 
         function resetCueSpin() {
-            if (isTableInMotion()) return;
+            if (!isConnected || !isMyTurn || isTableInMotion()) return;
             cueSpinX = 0;
             cueSpinY = 0;
             updateSpinControl();
         }
 
         function handleCanvasClick(e) {
+            if (!isConnected) {
+                showMessage('请先连接联机房间');
+                return;
+            }
+            if (!isMyTurn) {
+                showMessage('当前由对手操作');
+                return;
+            }
             const rect = canvas.getBoundingClientRect();
             const style = getComputedStyle(canvas);
             const borderLeft = parseFloat(style.borderLeftWidth);
@@ -1243,6 +1316,7 @@
                         updateUI();
                         showMessage('玩家' + (currentPlayer + 1) + '：调整方向和力度后点击"出杆"');
                     }
+                    sendGameStateToServer('ball-placement');
                 } else {
                     showMessage(freeBallMode ? '请将白球放置在台面有效区域内' : '请将白球放置在发球线后');
                 }
@@ -1273,6 +1347,7 @@
         }
 
         function declarePushOut() {
+            if (!isConnected || !isMyTurn) return;
             if (isTableInMotion() || !gameStarted) return;
             if (isPlacingBall) { showMessage('请先放置白球'); return; }
             showMessage('推杆：已声明推杆，此杆不受犯规限制');
@@ -1280,7 +1355,7 @@
         }
 
         function shoot() {
-            if (onlineMode && !isMyTurn) return;
+            if (!isConnected || !isMyTurn) return;
             if (isTableInMotion() || !gameStarted) return;
             if (isPlacingBall) { showMessage('请先放置白球'); return; }
             doShoot(false);
@@ -1288,6 +1363,10 @@
 
         function doShoot(isPushOut) {
             const speed = getShotSpeed(cuePower);
+            if (speed <= STOP_SPEED) {
+                showMessage('请先设置击球力度');
+                return;
+            }
             isPushOutShot = isPushOut;
             shotSnapshot = captureShotSnapshot();
             shotContext = captureShotContext();
@@ -1297,6 +1376,7 @@
             activeShotAngle = cueAngle;
             activeShotSpeed = speed;
             shotSpinApplied = false;
+            shotAuthorityPlayer = currentPlayer;
             whiteBall.sideSpin = activeShotSpinX;
             cueSpinX = 0;
             cueSpinY = 0;
@@ -1311,9 +1391,13 @@
             pottedThisShot = [];
             foul = false;
             cushionContactThisShot = false;
-            if (phase === 'break') breakCushionCount = 0;
+            if (phase === 'break') {
+                breakCushionCount = 0;
+                breakCushionBalls.clear();
+            }
             document.getElementById('shootBtn').disabled = true;
             showMessage('击球中...');
+            sendGameStateToServer('shot-start');
         }
 
         function isValidBallPosition(x, y) {
@@ -1360,6 +1444,7 @@
                 }
             }
             captureShotReplayFrame();
+            sendMotionStateToServer();
             if (!isAnyBallMoving() && ballMoving) { stopAllBalls(); ballMoving = false; }
             if (!ballMoving && !allBallsStopped) {
                 allBallsStopped = true;
@@ -1392,7 +1477,10 @@
             }
             if (vs || hs) {
                 cushionContactThisShot = true;
-                if (phase === 'break' && ball.type === 'numbered') breakCushionCount++;
+                if (phase === 'break' && ball.type === 'numbered') {
+                    breakCushionBalls.add(ball.number);
+                    breakCushionCount = breakCushionBalls.size;
+                }
                 playCushionSound(Math.max(Math.abs(ball.vx), Math.abs(ball.vy)));
             }
         }
@@ -1403,6 +1491,10 @@
 
         function isTableInMotion() {
             return isReplaying || ballMoving || !allBallsStopped || isAnyBallMoving();
+        }
+
+        function shouldSimulateTable() {
+            return !isConnected || myPlayerNumber === shotAuthorityPlayer;
         }
 
         function stopAllBalls() {
@@ -1499,7 +1591,10 @@
         function updatePushOutBtn() {
             const btn = document.getElementById('pushOutBtn');
             if (!btn) return;
-            btn.style.display = pushOutAvailable && gameStarted && !isTableInMotion() && !isPlacingBall ? 'inline-block' : 'none';
+            btn.style.display = isConnected && isMyTurn && pushOutAvailable && gameStarted
+                && !isTableInMotion() && !isPlacingBall && !awaitingPushOutDecision
+                ? 'inline-block'
+                : 'none';
         }
 
         function detectFirstBallHitAlongWhitePath(startX, startY, endX, endY) {
@@ -1594,15 +1689,18 @@
             if (isPushOutShot) {
                 isPushOutShot = false;
                 pushOutAvailable = false;
-                if (pottedNine) respotNineBall();
                 if (pottedWhite) {
-                    whiteBall.x = D_ZONE_CENTER_X; whiteBall.y = TABLE_HEIGHT / 2;
-                    whiteBall.vx = 0; whiteBall.vy = 0;
-                    if (!balls.includes(whiteBall)) balls.push(whiteBall);
+                    handleFoul(['推杆时白球落袋'], { pottedNine: !!pottedNine, pottedWhite: true });
+                    return;
                 }
+                if (pottedNine) respotNineBall();
                 awaitingPushOutDecision = true;
+                pushOutDecisionPlayer = 1 - currentPlayer;
+                shotAuthorityPlayer = null;
+                isMyTurn = myPlayerNumber === getControlPlayer();
                 showMessage('推杆完成！对手有权选择：接手击球 / 推回给玩家' + (currentPlayer + 1));
                 updateUI();
+                sendGameStateToServer('push-out-decision');
                 return;
             }
 
@@ -1636,21 +1734,29 @@
 
             if (pottedNine) {
                 scores[currentPlayer]++;
+                gameStarted = false;
+                shotAuthorityPlayer = null;
                 showMessage('玩家' + (currentPlayer + 1) + '打入9号球，赢得此局！比分 ' + scores[0] + ':' + scores[1]);
                 updateUI();
+                sendGameStateToServer('rack-won');
                 setTimeout(() => startNewRack(), 1500);
                 return;
             }
 
             if (pottedNumbered.length > 0) {
                 consecutiveFouls[currentPlayer] = 0;
-                if (phase === 'break') phase = 'normal';
-                pushOutAvailable = false;
+                if (phase === 'break') {
+                    phase = 'normal';
+                    pushOutAvailable = true;
+                } else {
+                    pushOutAvailable = false;
+                }
                 currentBreak += pottedNumbered.length;
+                shotAuthorityPlayer = null;
                 showMessage('进球！继续击球');
                 updateUI();
                 resetShotTracking();
-                if (onlineMode) sendGameStateToServer();
+                sendGameStateToServer('shot-result');
                 return;
             }
 
@@ -1658,7 +1764,8 @@
             else pushOutAvailable = false;
             endTurn();
             resetShotTracking();
-            if (onlineMode) sendGameStateToServer();
+            shotAuthorityPlayer = null;
+            sendGameStateToServer('shot-result');
         }
 
         function isBallOn(ball, context) {
@@ -1674,14 +1781,17 @@
         }
 
         function handleFoul(foulTypes, options) {
-            const otherPlayer = 1 - currentPlayer;
+            const foulingPlayer = currentPlayer;
+            const otherPlayer = 1 - foulingPlayer;
             currentBreak = 0;
             pushOutAvailable = false;
-            consecutiveFouls[currentPlayer]++;
-            if (consecutiveFouls[currentPlayer] >= 3) {
-                showMessage('玩家' + (currentPlayer + 1) + '连续三次犯规，判负！玩家' + (otherPlayer + 1) + '获胜！');
+            consecutiveFouls[foulingPlayer]++;
+            if (consecutiveFouls[foulingPlayer] >= 3) {
+                showMessage('玩家' + (foulingPlayer + 1) + '连续三次犯规，判负！玩家' + (otherPlayer + 1) + '获胜！');
                 scores[otherPlayer]++;
                 endGame();
+                shotAuthorityPlayer = null;
+                sendGameStateToServer('match-ended');
                 return;
             }
             if (options.pottedNine) respotNineBall();
@@ -1698,9 +1808,15 @@
             phase = 'normal';
             freeBallMode = true;
             isPlacingBall = true;
-            showMessage('犯规（' + foulTypes.join('+') + '）！玩家' + (otherPlayer + 1) + '获得自由球，请在台面任意位置点击放置白球');
+            shotAuthorityPlayer = null;
+            isMyTurn = myPlayerNumber === getControlPlayer();
+            const warning = consecutiveFouls[foulingPlayer] === 2
+                ? '；玩家' + (foulingPlayer + 1) + '已连续两次犯规，下一次犯规将判负'
+                : '';
+            showMessage('犯规（' + foulTypes.join('+') + '）！玩家' + (otherPlayer + 1)
+                + '获得自由球，请在台面任意位置点击放置白球' + warning);
             updateUI();
-            if (onlineMode) sendGameStateToServer();
+            sendGameStateToServer('shot-result');
         }
 
         function resetWhiteBall() {
@@ -1724,8 +1840,10 @@
             currentPlayer = breaker;
             frameStarter = breaker;
             pushOutAvailable = false;
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
             showMessage('新的一局开始！玩家' + (breaker + 1) + '开球，请在发球线后放置白球');
             updateUI();
+            sendGameStateToServer('new-rack');
         }
 
         function endGame() {
@@ -1754,12 +1872,21 @@
 
         function resetGame() {
             if (isReplaying) { showMessage('请等待回放结束'); return; }
+            if (!isConnected) { showMessage('请先连接联机房间'); return; }
+            if (myPlayerNumber !== 0) { showMessage('只有玩家1可以重置联机房间'); return; }
+            frameStarter = 0;
             initGame();
+            currentPlayer = 0;
+            isMyTurn = true;
             showMessage('游戏重置！');
             updateUI();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'reset-game', state: serializeGameState() }));
+            }
         }
 
         function updateUI() {
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
             document.getElementById('score1').textContent = scores[0];
             document.getElementById('score2').textContent = scores[1];
             document.getElementById('break1').textContent = currentPlayer === 0 ? currentBreak : 0;
@@ -1769,8 +1896,9 @@
             document.getElementById('foulCount').textContent = consecutiveFouls[currentPlayer];
             const smallest = getSmallestBallOnTable();
             let target = '', phaseText = '';
-            if (!gameStarted && scores[0] + scores[1] > 0) { target = '已结束'; phaseText = '结束'; }
-            else if (freeBallMode) { target = freeBallTarget ? '自由球: ' + freeBallTarget.number + '号' : '选择自由球'; phaseText = '自由球'; }
+            if (isPlacingBall && freeBallMode) { target = '自由摆球'; phaseText = '自由球'; }
+            else if (isPlacingBall && phase === 'break') { target = '放置白球'; phaseText = '开球'; }
+            else if (!gameStarted && scores[0] + scores[1] > 0) { target = '已结束'; phaseText = '结束'; }
             else if (phase === 'break') { target = '开球'; phaseText = '开球'; }
             else if (smallest) { target = smallest.number + '号球'; phaseText = '进行中'; }
             else { target = '结束'; phaseText = '结束'; }
@@ -1778,7 +1906,7 @@
             document.getElementById('phase').textContent = phaseText;
             const indicator = document.getElementById('targetIndicator');
             if (indicator) {
-                if (freeBallMode && freeBallTarget) indicator.style.background = BALL_COLORS[freeBallTarget.number] || '#fff';
+                if (freeBallMode) indicator.style.background = '#fff';
                 else if (phase === 'break') indicator.style.background = '#FFD700';
                 else if (smallest) indicator.style.background = BALL_COLORS[smallest.number] || '#fff';
                 else indicator.style.background = '#888';
@@ -1790,11 +1918,17 @@
                 p2.classList.toggle('active', currentPlayer === 1 && gameStarted);
             }
 
-            if (onlineMode && gameStarted) {
+            if (isConnected) {
                 const turnEl = document.getElementById('turnIndicator');
                 const turnChip = document.getElementById('turnChip');
                 turnChip.style.display = '';
-                if (isMyTurn) {
+                if (awaitingPushOutDecision && isMyTurn) {
+                    turnEl.textContent = '请决定推杆';
+                    turnEl.className = 'chip-val turn-on';
+                } else if (awaitingPushOutDecision) {
+                    turnEl.textContent = '等待对手决定';
+                    turnEl.className = 'chip-val turn-off';
+                } else if (isMyTurn) {
                     turnEl.textContent = '你的回合';
                     turnEl.className = 'chip-val turn-on';
                 } else {
@@ -1803,32 +1937,39 @@
                 }
             }
 
-            if (onlineMode && !isMyTurn && gameStarted) {
-                document.getElementById('shootBtn').disabled = true;
-            }
-
-            document.getElementById('shootBtn').disabled = isTableInMotion() || !gameStarted || isPlacingBall || awaitingPushOutDecision || (onlineMode && !isMyTurn);
-            document.getElementById('pushBackBtn').style.display = awaitingPushOutDecision ? 'inline-block' : 'none';
-            document.getElementById('pushTakeBtn').style.display = awaitingPushOutDecision ? 'inline-block' : 'none';
+            document.getElementById('shootBtn').disabled = !isConnected || isTableInMotion() || !gameStarted
+                || isPlacingBall || awaitingPushOutDecision || !isMyTurn;
+            const canDecidePushOut = isConnected && awaitingPushOutDecision && myPlayerNumber === pushOutDecisionPlayer;
+            document.getElementById('pushBackBtn').style.display = canDecidePushOut ? 'inline-block' : 'none';
+            document.getElementById('pushTakeBtn').style.display = canDecidePushOut ? 'inline-block' : 'none';
+            document.getElementById('resetBtn').disabled = !isConnected || myPlayerNumber !== 0 || isTableInMotion();
             updateReplayButton();
             updatePushOutBtn();
         }
 
         function pushOutTakeShot() {
+            if (!isConnected || myPlayerNumber !== pushOutDecisionPlayer) return;
+            currentPlayer = pushOutDecisionPlayer;
             awaitingPushOutDecision = false;
-            currentPlayer = 1 - currentPlayer;
+            pushOutDecisionPlayer = null;
             pushOutAvailable = false;
             phase = 'normal';
+            isMyTurn = myPlayerNumber === currentPlayer;
             showMessage('对手接手击球');
             updateUI();
+            sendGameStateToServer('push-out-resolved');
         }
 
         function pushOutForceBack() {
+            if (!isConnected || myPlayerNumber !== pushOutDecisionPlayer) return;
             awaitingPushOutDecision = false;
+            pushOutDecisionPlayer = null;
             pushOutAvailable = false;
             phase = 'normal';
+            isMyTurn = myPlayerNumber === currentPlayer;
             showMessage('对手要求推回，玩家' + (currentPlayer + 1) + '继续击球');
             updateUI();
+            sendGameStateToServer('push-out-resolved');
         }
 
         function showMessage(msg) {
@@ -1865,7 +2006,7 @@
         }
 
         function drawGuideLines() {
-            if (guideMode === 'off' || isTableInMotion() || !whiteBall || !gameStarted) return;
+            if (!isMyTurn || guideMode === 'off' || isTableInMotion() || !whiteBall || !gameStarted) return;
             const speed = Math.max(getShotSpeed(cuePower), 0.5);
             const whiteVx = Math.cos(cueAngle) * speed, whiteVy = Math.sin(cueAngle) * speed;
             const maxLength = guideMode === 'long' ? 1500 : 350;
@@ -1967,7 +2108,7 @@
         }
 
         function drawCue() {
-            if (isTableInMotion() || !gameStarted || isPlacingBall) return;
+            if (!isMyTurn || isTableInMotion() || !gameStarted || isPlacingBall) return;
             const cueLength = 150;
             const startX = whiteBall.x - Math.cos(cueAngle) * (BALL_RADIUS + 10);
             const startY = whiteBall.y - Math.sin(cueAngle) * (BALL_RADIUS + 10);
@@ -1980,7 +2121,9 @@
 
         function drawPlacementHint() {
             if (isReplaying || !isPlacingBall) return;
-            const isValid = isValidBallPosition(whiteBall.x, whiteBall.y);
+            const isValid = freeBallMode
+                ? isValidAnyPosition(whiteBall.x, whiteBall.y)
+                : isValidBallPosition(whiteBall.x, whiteBall.y);
             ctx.beginPath(); ctx.arc(whiteBall.x, whiteBall.y, BALL_RADIUS + 5, 0, Math.PI * 2);
             ctx.strokeStyle = isValid ? 'rgba(0,255,0,0.9)' : 'rgba(255,0,0,0.9)';
             ctx.lineWidth = 4; ctx.stroke();
@@ -1994,7 +2137,7 @@
             drawBalls();
             drawCue();
             drawGuideLines();
-            if (!isReplaying && isTableInMotion()) updateBalls();
+            if (!isReplaying && isTableInMotion() && shouldSimulateTable()) updateBalls();
             requestAnimationFrame(gameLoop);
         }
 

@@ -71,26 +71,37 @@ function roomPlayersCount(room) {
 
 function initGameState() {
   return {
-    balls: [],
+    balls: createRackState(),
     scores: [0, 0],
     currentPlayer: 0,
+    controlPlayer: 0,
     phase: 'break',
     currentBreak: 0,
     consecutiveFouls: [0, 0],
     freeBallMode: false,
-    gameStarted: false
+    freeBallTargetNumber: null,
+    isPlacingBall: true,
+    ballMoving: false,
+    allBallsStopped: true,
+    gameStarted: false,
+    pushOutAvailable: false,
+    awaitingPushOutDecision: false,
+    pushOutDecisionPlayer: null,
+    frameStarter: 0,
+    shotAuthorityPlayer: null,
+    message: '玩家1：请在发球线后放置白球'
   };
 }
 
 function createRackState() {
-  const BALL_RADIUS = 8;
+  const BALL_RADIUS = 5;
   const spacing = BALL_RADIUS * 2.05;
-  const TABLE_INNER_LENGTH = 540;
-  const TABLE_INNER_WIDTH = 270;
-  const BORDER = 30;
+  const TABLE_INNER_LENGTH = 508;
+  const TABLE_INNER_WIDTH = 254;
+  const BORDER = 6;
 
   const rackX = BORDER + TABLE_INNER_LENGTH * 0.75;
-  const rackY = TABLE_INNER_WIDTH / 2 + BORDER;
+  const rackY = BORDER + TABLE_INNER_WIDTH / 2;
   const dCenterX = BORDER + TABLE_INNER_LENGTH * 0.25;
 
   const positions = [
@@ -101,15 +112,13 @@ function createRackState() {
   const numbers = [1, 2, 3, 4, 9, 5, 6, 7, 8];
 
   const balls = [];
-  balls.push({ number: 0, type: 'white', x: dCenterX, y: rackY, vx: 0, vy: 0 });
-
-  const halfHeight = (numbers.length - 1) * spacing * 0.5;
+  balls.push({ number: 0, type: 'white', x: dCenterX, y: rackY, vx: 0, vy: 0, sideSpin: 0 });
 
   numbers.forEach((num, i) => {
     const pos = positions[i];
-    const bx = rackX + pos.row * spacing * Math.sqrt(3) / 2;
-    const by = rackY + pos.col * spacing;
-    balls.push({ number: num, type: 'numbered', x: bx, y: by, vx: 0, vy: 0 });
+    const bx = rackX + pos.row * spacing * 0.866;
+    const by = rackY + pos.col * spacing / 2;
+    balls.push({ number: num, type: 'numbered', x: bx, y: by, vx: 0, vy: 0, sideSpin: 0 });
   });
 
   return balls;
@@ -184,10 +193,6 @@ wss.on('connection', (ws) => {
         room.gameStarted = true;
         room.currentTurn = 0;
         const state = initGameState();
-        state.balls = createRackState();
-        state.gameStarted = true;
-        state.currentPlayer = 0;
-        state.phase = 'break';
         room.gameState = state;
 
         send(room.players[0], {
@@ -207,6 +212,49 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    if (message.type === 'state') {
+      if (!ws.roomId || !rooms.has(ws.roomId)) return;
+      const room = rooms.get(ws.roomId);
+      if (!room.gameStarted || ws.player !== room.currentTurn) return;
+      const state = message.state;
+      if (!state || !Array.isArray(state.balls)) return;
+
+      if (state.partial === 'motion') {
+        broadcast(room, {
+          type: 'state',
+          reason: message.reason || 'shot-update',
+          state
+        }, ws);
+        return;
+      }
+
+      const controlPlayer = state.controlPlayer === 1 ? 1 : 0;
+      room.gameState = state;
+      room.currentTurn = controlPlayer;
+      broadcast(room, {
+        type: 'state',
+        reason: message.reason || 'state-update',
+        state
+      }, ws);
+      return;
+    }
+
+    if (message.type === 'reset-game') {
+      if (!ws.roomId || !rooms.has(ws.roomId) || ws.player !== 0) return;
+      const room = rooms.get(ws.roomId);
+      const state = message.state;
+      if (!state || !Array.isArray(state.balls)) return;
+      room.gameStarted = true;
+      room.currentTurn = 0;
+      room.gameState = state;
+      broadcast(room, {
+        type: 'state',
+        reason: 'reset-game',
+        state
+      }, ws);
+      return;
+    }
+
     if (message.type === 'turn-done') {
       if (!ws.roomId || !rooms.has(ws.roomId)) return;
       const room = rooms.get(ws.roomId);
@@ -217,20 +265,20 @@ wss.on('connection', (ws) => {
       if (!newState || !newState.balls) return;
 
       room.gameState = newState;
-      room.currentTurn = 1 - room.currentTurn;
+      room.currentTurn = newState.currentPlayer === 1 ? 1 : 0;
 
       send(ws, {
         type: 'state-update',
         state: newState,
-        yourTurn: false
+        yourTurn: ws.player === room.currentTurn
       });
 
-      const opponent = room.players[room.currentTurn];
+      const opponent = room.players[1 - ws.player];
       if (opponent) {
         send(opponent, {
           type: 'state-update',
           state: newState,
-          yourTurn: true
+          yourTurn: opponent.player === room.currentTurn
         });
       }
 
