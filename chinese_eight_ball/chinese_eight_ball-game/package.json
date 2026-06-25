@@ -1,0 +1,12 @@
+{
+  "name": "chinese-eight-ball-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTML5 Canvas Chinese eight-ball game with a WebSocket online mode.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

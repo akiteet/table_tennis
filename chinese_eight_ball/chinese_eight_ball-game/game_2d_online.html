@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>中式八球 - 联机对战</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+            min-height: 0; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            color: white; font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .top-nav {
+            flex: 0 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 10px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(12,12,12,0.92);
+            z-index: 30;
+        }
+        .nav-title { font-size: 18px; font-weight: 700; color: #e6d2ad; }
+        .nav-links { display: flex; gap: 6px; flex-wrap: wrap; }
+        .nav-link {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 30px; padding: 0 12px;
+            border-radius: 5px; border: 1px solid rgba(212,165,116,0.42);
+            color: #e8d8bc; text-decoration: none; font-size: 12px;
+            background: rgba(255,255,255,0.04);
+        }
+        .nav-link.active, .nav-link:hover {
+            background: rgba(212,165,116,0.18);
+            border-color: rgba(212,165,116,0.78); color: #fff;
+        }
+
+        .online-bar {
+            flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(150px, 0.65fr) auto auto auto;
+            gap: 7px;
+            align-items: end;
+            padding: 7px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(24,24,24,0.94);
+        }
+        .online-field {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .online-field label {
+            color: #c9b99e;
+            font-size: 12px;
+        }
+        .online-field input {
+            min-width: 0;
+            min-height: 30px;
+            padding: 4px 8px;
+            border: 1px solid rgba(212,165,116,0.45);
+            border-radius: 5px;
+            outline: none;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            font-size: 14px;
+        }
+        .online-field input:focus { border-color: #d4a574; }
+        .online-btn {
+            min-height: 30px;
+            margin: 0;
+            padding: 4px 12px;
+            border: 1px solid #8a5a33;
+            border-radius: 5px;
+            background: #4a2f15;
+            color: #fff;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .online-btn:hover { background: #634222; }
+        .online-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .online-status {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            min-height: 22px;
+        }
+        .lobby-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 0 9px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.05);
+            color: #ccc;
+            font-size: 13px;
+        }
+        .lobby-status.connected { color: #2ecc71; }
+        .lobby-status.error { color: #e74c3c; }
+
+        /* ===== GAME ===== */
+        #gameContainer {
+            flex: 1; min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .app-shell {
+            flex: 1 1 auto; min-height: 0;
+            display: grid;
+            grid-template-columns: 100px 280px minmax(0, 1fr);
+            align-items: stretch; overflow: hidden; gap: 0;
+        }
+
+        .col-left {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: stretch;
+            padding: 8px 4px;
+            background: rgba(12,12,12,0.6);
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+        .col-left .section-title { margin: 0 0 6px; font-size: 16px; }
+        .col-left .power-gauge-container { flex: 1; width: 50px; min-height: 120px; margin: 0 auto; }
+        .col-left .power-label { margin-top: 6px; font-size: 18px; }
+        .col-left .gauge-marker { font-size: 12px; padding-right: 6px; }
+        .gauge-marker.high { top: 5px !important; }
+        .gauge-marker.mid { top: 50% !important; transform: translateY(-50%); }
+        .gauge-marker.low { top: auto !important; bottom: 5px; }
+
+        .col-mid {
+            display: flex; flex-direction: column; gap: 6px;
+            padding: 8px;
+            background: rgba(12,12,12,0.4);
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+        .col-mid .panel {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 8px; min-height: 0;
+        }
+        .col-mid .section-title { font-size: 15px; margin-bottom: 6px; }
+
+        .col-right { display: flex; flex-direction: column; min-height: 0; }
+        .table-stage {
+            flex: 1; display: flex;
+            align-items: center; justify-content: center;
+            overflow: hidden; padding: 4px;
+        }
+        #table {
+            flex: 0 0 auto;
+            max-width: 100%; max-height: 100%;
+            object-fit: contain;
+            border: 3px solid #5a3a22; background: #111; cursor: crosshair;
+        }
+
+        .console-bar {
+            flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: auto auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 18px;
+            background: rgba(10,10,10,0.92);
+            border-top: 1px solid rgba(212,165,116,0.15);
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+        }
+        .console-group { display: flex; align-items: center; gap: 14px; }
+        .console-group.sep {
+            border-left: 1px solid rgba(255,255,255,0.08);
+            padding-left: 14px;
+        }
+        .console-group.status-group {
+            min-width: 0;
+        }
+
+        .score-mini { display: flex; gap: 8px; }
+        .score-mini-item {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 7px 16px; border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            min-width: 76px;
+        }
+        .score-mini-item.active {
+            border-color: rgba(212,165,116,0.5);
+            background: rgba(212,165,116,0.08);
+            box-shadow: 0 0 10px rgba(212,165,116,0.12);
+        }
+        .score-mini-label { font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+        .score-mini-val { font-size: 30px; font-weight: 700; color: #f0e0c8; line-height: 1.2; }
+        .score-mini-break { font-size: 12px; color: #777; }
+
+        .status-chips {
+            display: grid;
+            grid-template-columns: minmax(0, 1.55fr) minmax(70px, 0.9fr) minmax(44px, 0.55fr) minmax(44px, 0.55fr);
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+        .status-chips.online-status-chips {
+            grid-template-columns: minmax(0, 1.45fr) minmax(70px, 0.8fr) minmax(44px, 0.5fr) minmax(44px, 0.5fr) minmax(74px, 0.85fr);
+        }
+        .chip { display: flex; flex-direction: column; align-items: center; min-width: 0; gap: 2px; }
+        .chip.target-chip { align-items: flex-start; }
+        .chip-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+        .chip-val { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 18px; font-weight: 600; color: #e0d0b0; white-space: nowrap; line-height: 1.15; }
+        .target-value { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; white-space: nowrap; }
+        #currentTarget { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        .chip-val.highlight { color: #ffcc00; }
+        .chip-val.danger { color: #ff6644; }
+        .chip-val.turn-on { color: #2ecc71; }
+        .chip-val.turn-off { color: #ff6644; }
+
+        .console-btns { display: flex; gap: 8px; justify-self: end; }
+        .console-btn {
+            padding: 10px 18px; font-size: 16px; font-weight: 600;
+            border-radius: 6px; border: 1px solid #666;
+            cursor: pointer; color: #ddd;
+            background: linear-gradient(180deg,#555,#333);
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+        .console-btn:hover {
+            background: linear-gradient(180deg,#666,#444);
+            color: #fff; border-color: #888;
+            transform: translateY(-1px);
+        }
+        .console-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .console-btn.shoot {
+            background: linear-gradient(180deg,#d54030,#8b0000);
+            border-color: #e74c3c; color: #fff;
+            box-shadow: 0 2px 10px rgba(180,0,0,0.25);
+        }
+        .console-btn.shoot:hover { background: linear-gradient(180deg,#e74c3c,#a00000); box-shadow: 0 4px 16px rgba(200,0,0,0.35); }
+        .console-btn.reset { background: linear-gradient(180deg,#4a4a4a,#2a2a2a); border-color: #555; }
+
+        .target-indicator {
+            display: inline-block; width: 16px; height: 16px;
+            border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+            flex-shrink: 0; vertical-align: middle;
+        }
+
+        .power-gauge-container {
+            background: linear-gradient(180deg,#2a2a2a,#1a1a1a);
+            border-radius: 8px; padding: 4px;
+            position: relative;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            border: 2px solid #444;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+        .power-gauge {
+            width: 100%; height: 0%;
+            background: linear-gradient(to top,#00ff66,#66ff00,#ffff00,#ff9900,#ff3300);
+            border-radius: 4px; transition: none;
+        }
+        .power-label { text-align: center; color: #d4a574; font-weight: 500; }
+        .gauge-marker {
+            position: absolute; left: 0; width: 100%;
+            text-align: right; font-size: 11px; color: #888; font-weight: 500;
+            padding-right: 5px; pointer-events: none;
+        }
+
+        .direction-control {
+            width: 100%; aspect-ratio: 1;
+            border-radius: 50%;
+            background: linear-gradient(145deg,#2a2a2a,#1a1a1a);
+            position: relative; cursor: crosshair;
+            border: 3px solid #555;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.05);
+            max-width: 200px;
+        }
+        .direction-control::before {
+            content: ''; position: absolute;
+            top: 50%; left: 50%;
+            width: 88%; height: 88%;
+            transform: translate(-50%,-50%);
+            border-radius: 50%; border: 1px dashed #444;
+        }
+        .direction-control::after {
+            content: ''; position: absolute;
+            top: 50%; left: 50%;
+            width: 68%; height: 68%;
+            transform: translate(-50%,-50%);
+            border-radius: 50%; border: 1px dashed #333;
+        }
+        .direction-handle {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%,#66ccff,#0088cc);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            pointer-events: none;
+            box-shadow: 0 0 12px rgba(0,170,255,0.6);
+        }
+        .direction-center {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%,#fff,#ccc);
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+        }
+        .direction-label { text-align: center; font-size: 14px; color: #aaa; margin-top: 3px; }
+
+        .spin-control {
+            width: 100%; aspect-ratio: 1;
+            border-radius: 50%; position: relative; cursor: crosshair;
+            touch-action: none; max-width: 180px;
+            border: 3px solid #888;
+            background: radial-gradient(circle at 35% 30%,#fff 0%,#e4e4e4 45%,#b7b7b7 100%);
+            box-shadow: inset -8px -10px 18px rgba(0,0,0,0.22), 0 5px 14px rgba(0,0,0,0.4);
+        }
+        .spin-control::before, .spin-control::after {
+            content: ''; position: absolute; background: rgba(0,0,0,0.15); pointer-events: none;
+        }
+        .spin-control::before { width: 1px; height: 90%; left: 50%; top: 5%; }
+        .spin-control::after { width: 90%; height: 1px; left: 5%; top: 50%; }
+        .spin-handle {
+            width: 16px; height: 16px; border-radius: 50%;
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%,-50%);
+            background: #c62828; border: 2px solid #fff;
+            box-shadow: 0 2px 7px rgba(0,0,0,0.45); pointer-events: none;
+        }
+        .spin-axis-label { position: absolute; color: #222; font-size: 12px; font-weight: 700; pointer-events: none; }
+        .spin-axis-label.top { top: 5px; left: 50%; transform: translateX(-50%); }
+        .spin-axis-label.bottom { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .spin-axis-label.left { left: 5px; top: 50%; transform: translateY(-50%); }
+        .spin-axis-label.right { right: 5px; top: 50%; transform: translateY(-50%); }
+        .spin-value { text-align: center; color: #d4a574; font-size: 13px; min-height: 18px; margin-top: 3px; }
+        .spin-btn { font-size: 12px; padding: 3px 8px; color: #aaa; cursor: pointer; background: transparent; border: 1px solid #555; border-radius: 3px; margin-top: 2px; }
+        .spin-btn:hover { color: #fff; border-color: #888; }
+
+        .message {
+            position: fixed; left: 50%; bottom: 110px;
+            transform: translateX(-50%);
+            font-size: 16px; color: #ff0;
+            background: rgba(0,0,0,0.75);
+            padding: 6px 16px; border-radius: 6px;
+            white-space: nowrap; z-index: 100;
+        }
+        .guide-section { display: flex; align-items: center; gap: 4px; }
+        .guide-section .section-label { font-size: 11px; color: #888; margin-right: 2px; }
+        .guide-btn {
+            font-size: 12px; padding: 3px 6px; border-radius: 3px;
+            border: 1px solid #555; color: #999; cursor: pointer; background: transparent;
+        }
+        .guide-btn:hover { color: #fff; border-color: #888; }
+        .guide-btn.active { color: #d4a574; border-color: #8a5a33; background: rgba(180,120,60,0.15); }
+
+        .hidden { display: none !important; }
+        @media (max-width: 900px) {
+            body { overflow: auto; }
+            .online-bar { grid-template-columns: 1fr 1fr; }
+            .online-status { grid-column: 1 / -1; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav" aria-label="页面导航">
+        <div class="nav-title">中式八球 - 联机对战</div>
+        <div class="nav-links">
+            <a class="nav-link" href="game_2d.html">本地游戏</a>
+            <a class="nav-link active" href="game_2d_online.html">联机游戏</a>
+            <a class="nav-link" href="game_2d_rules.html">规则说明</a>
+        </div>
+    </nav>
+
+    <section class="online-bar" aria-label="联机房间">
+        <div class="online-field">
+            <label for="serverUrl">服务器</label>
+            <input type="text" id="serverUrl" placeholder="wss://服务名.onrender.com">
+        </div>
+        <div class="online-field">
+            <label for="roomId">房间号</label>
+            <input type="text" id="roomId" maxlength="32" placeholder="例如 eight-ball-001">
+        </div>
+        <button id="connectBtn" class="online-btn" onclick="connectToRoom()">连接房间</button>
+        <button id="disconnectBtn" class="online-btn hidden" onclick="disconnectFromRoom()">断开</button>
+        <button id="copyInviteBtn" class="online-btn" onclick="copyInviteLink()">复制邀请链接</button>
+        <div class="online-status">
+            <span id="lobbyStatus" class="lobby-status">未连接</span>
+            <span id="currentPlayerLabel" class="lobby-status">身份：未分配</span>
+            <span id="currentRoom" class="lobby-status">房间：-</span>
+            <span id="playersStatus" class="lobby-status">玩家：0/2</span>
+        </div>
+    </section>
+
+    <!-- ===== 游戏 ===== -->
+    <div id="gameContainer">
+        <main class="app-shell">
+            <div class="col-left">
+                <div class="section-title">力度</div>
+                <div class="power-gauge-container" id="powerContainer">
+                    <div class="gauge-marker high">Max</div>
+                    <div class="gauge-marker mid">50%</div>
+                    <div class="gauge-marker low">Min</div>
+                    <div class="power-gauge" id="powerGauge"></div>
+                </div>
+                <div class="power-label"><span id="powerLabel">0</span>%</div>
+            </div>
+
+            <div class="col-mid">
+                <div class="panel">
+                    <div class="section-title">击球点</div>
+                    <div class="spin-control" id="spinControl">
+                        <span class="spin-axis-label top">高杆</span>
+                        <span class="spin-axis-label bottom">低杆</span>
+                        <span class="spin-axis-label left">左塞</span>
+                        <span class="spin-axis-label right">右塞</span>
+                        <div class="spin-handle" id="spinHandle"></div>
+                    </div>
+                    <div class="spin-value" id="spinValue">中心击球</div>
+                    <button class="spin-btn" type="button" onclick="resetCueSpin()">复位</button>
+                </div>
+                <div class="panel">
+                    <div class="section-title">方向</div>
+                    <div class="direction-control" id="directionControl">
+                        <canvas id="directionTicks" width="200" height="200" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+                        <div class="direction-center"></div>
+                        <div class="direction-handle" id="directionHandle"></div>
+                    </div>
+                    <div class="direction-label"><span id="angleDisplay">0°</span></div>
+                    <div class="direction-label" style="font-size:9px;color:#555;">←→ 1°步进</div>
+                </div>
+            </div>
+
+            <div class="col-right">
+                <div class="table-stage">
+                    <canvas id="table" width="680" height="380"></canvas>
+                </div>
+
+                <div class="console-bar">
+                    <div class="console-group">
+                        <div class="score-mini">
+                            <div class="score-mini-item" id="scorePanel1">
+                                <div class="score-mini-label" style="color:#4a8a4a;">玩家1</div>
+                                <div class="score-mini-val" id="score1">0</div>
+                                <div class="score-mini-break" id="break1">0</div>
+                            </div>
+                            <div class="score-mini-item" id="scorePanel2">
+                                <div class="score-mini-label" style="color:#8a4a4a;">玩家2</div>
+                                <div class="score-mini-val" id="score2">0</div>
+                                <div class="score-mini-break" id="break2">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="console-group sep">
+                        <div class="guide-section">
+                            <span class="section-label">引导线</span>
+                            <button class="guide-btn" id="guideOff" onclick="setGuideMode('off')">关</button>
+                            <button class="guide-btn active" id="guideLong" onclick="setGuideMode('long')">长</button>
+                            <button class="guide-btn" id="guideShort" onclick="setGuideMode('short')">短</button>
+                        </div>
+                    </div>
+
+                    <div class="console-group sep status-group">
+                        <div class="status-chips online-status-chips">
+                            <div class="chip target-chip">
+                                <span class="chip-label">目标</span>
+                                <span class="chip-val highlight target-value">
+                                    <span class="target-indicator" id="targetIndicator" style="background:#FFD700;"></span>
+                                    <span id="currentTarget">开放球局</span>
+                                </span>
+                            </div>
+                            <div class="chip">
+                                <span class="chip-label">阶段</span>
+                                <span class="chip-val" id="phase">开球</span>
+                            </div>
+                            <div class="chip">
+                                <span class="chip-label">犯规</span>
+                                <span class="chip-val danger" id="foulCount">0</span>
+                            </div>
+                            <div class="chip">
+                                <span class="chip-label">剩余</span>
+                                <span class="chip-val highlight" id="remainingBalls">15</span>
+                            </div>
+                            <div class="chip" id="turnChip" style="display:none;">
+                                <span class="chip-label">回合</span>
+                                <span class="chip-val" id="turnIndicator">等待</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="console-btns">
+                        <button class="console-btn" id="replayBtn" onclick="replayLastShot()" disabled>回放</button>
+                        <button class="console-btn reset" id="resetBtn" onclick="resetGame()">重置</button>
+                        <button class="console-btn shoot" id="shootBtn" onclick="shoot()">出杆</button>
+                    </div>
+                </div>
+            </div>
+            <div class="message" id="message"></div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================================
+        //  ONLINE VARIABLES
+        // ============================================================
+        let ws = null;
+        let onlineRoomId = '';
+        let clientId = '';
+        let myPlayerNumber = -1;
+        let isConnected = false;
+        let onlineMode = true;
+        let isMyTurn = false;
+        let applyingRemoteState = false;
+        let shotAuthorityPlayer = null;
+        let lastStateBroadcastAt = 0;
+
+        // ============================================================
+        //  GAME VARIABLES
+        // ============================================================
+        let canvas, ctx;
+        let SCALE, TABLE_INNER_LENGTH, TABLE_INNER_WIDTH, BORDER, TABLE_WIDTH, TABLE_HEIGHT;
+        let BALL_RADIUS, FRICTION, HOLE_RADIUS, BALL_DIAMETER, D_ZONE_RADIUS;
+        let BAULK_LINE_X, D_ZONE_CENTER_X, D_ZONE_CENTER_Y;
+        let holes;
+
+        let balls = [];
+        let whiteBall = null;
+        let scores = [0, 0];
+        let currentPlayer = 0;
+        let playerGroups = [null, null];
+        let currentBreak = 0;
+        let phase = 'break';
+        let pottedThisShot = [];
+        let foul = false;
+        let foulType = '';
+        let isPlacingBall = false;
+        let ballMoving = false;
+        let gameStarted = false;
+        let allBallsStopped = true;
+        let firstBallHit = null;
+        let shotStarted = false;
+        let freeBallMode = false;
+        let freeBallTarget = null;
+        let shotSnapshot = null;
+        let shotContext = null;
+        let frameStarter = 0;
+        let lastMessage = '';
+        let currentShotReplay = [];
+        let lastShotReplay = [];
+        let replayRestoreFrame = null;
+        let replayRestoreMessage = '';
+        let isReplaying = false;
+        let replayFrameIndex = 0;
+        let replayLastFrameAt = 0;
+        let replayCaptureCounter = 0;
+        let consecutiveFouls = [0, 0];
+        let cushionContactThisShot = false;
+        let breakCushionCount = 0;
+        let breakCushionBalls = new Set();
+        let pushOutAvailable = false;
+        let isPushOutShot = false;
+        let awaitingPushOutDecision = false;
+        let pushOutDecisionPlayer = null;
+
+        let cueAngle = 0;
+        let cuePower = 0;
+        let cueSpinX = 0;
+        let cueSpinY = 0;
+        let activeShotSpinX = 0;
+        let activeShotSpinY = 0;
+        let activeShotAngle = 0;
+        let activeShotSpeed = 0;
+        let shotSpinApplied = false;
+        let directionControlActive = false;
+        let powerControlActive = false;
+        let spinControlActive = false;
+
+        let guideMode = 'short';
+        const STOP_SPEED = 0.08;
+        const BASE_SHOT_SPEED = 12;
+        const HIGH_POWER_BOOST = 4;
+        const CUSHION_RESTITUTION = 0.82;
+        const TOP_SPIN_STRENGTH = 0.42;
+        const SIDE_SPIN_CUSHION_STRENGTH = 0.24;
+        const SIDE_SPIN_DECAY = 0.992;
+        const REPLAY_FRAME_DURATION = 32;
+        const REPLAY_CAPTURE_INTERVAL = 2;
+        let audioContext = null;
+        let lastBallSoundAt = 0;
+        let lastCushionSoundAt = 0;
+
+        const BALL_COLORS = [
+            null, '#F4D000', '#1E5BFF', '#E12B2B', '#7B3294',
+            '#E87500', '#138A43', '#7A1E1E', '#050505',
+            '#F4D000', '#1E5BFF', '#E12B2B', '#7B3294',
+            '#E87500', '#138A43', '#7A1E1E'
+        ];
+
+        function getBallSwatch(number) {
+            if (number >= 9 && number <= 15) {
+                return `linear-gradient(to bottom, #f7f7f2 0 25%, ${BALL_COLORS[number]} 25% 75%, #f7f7f2 75% 100%)`;
+            }
+            return BALL_COLORS[number] || '#fff';
+        }
+
+        function getBallGroup(number) {
+            if (number >= 1 && number <= 7) return 'solid';
+            if (number >= 9 && number <= 15) return 'stripe';
+            if (number === 8) return 'eight';
+            return null;
+        }
+
+        function getGroupName(group) {
+            if (group === 'solid') return '全色球';
+            if (group === 'stripe') return '花色球';
+            if (group === 'eight') return '黑八';
+            return '开放球局';
+        }
+
+        function getOppositeGroup(group) {
+            return group === 'solid' ? 'stripe' : 'solid';
+        }
+
+        // ============================================================
+        //  ONLINE FUNCTIONS
+        // ============================================================
+        function connectToRoom() {
+            getGameAudioContext();
+            const serverUrl = document.getElementById('serverUrl').value.trim();
+            onlineRoomId = document.getElementById('roomId').value.trim();
+            if (!serverUrl) { showLobbyStatus('请输入服务器地址', 'error'); return; }
+            if (!onlineRoomId) { showLobbyStatus('请输入房间号', 'error'); return; }
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                ws.close();
+            }
+            try {
+                showLobbyStatus('连接中...', '');
+                ws = new WebSocket(serverUrl);
+                ws.onopen = () => {
+                    showLobbyStatus('正在加入房间...', '');
+                    ws.send(JSON.stringify({ type: 'join', roomId: onlineRoomId }));
+                };
+                ws.onmessage = (event) => {
+                    try {
+                        handleOnlineMessage(JSON.parse(event.data));
+                    } catch (error) {
+                        showLobbyStatus('收到无效的服务器消息', 'error');
+                    }
+                };
+                ws.onclose = onDisconnectedFromGame;
+                ws.onerror = () => { showLobbyStatus('连接失败，请检查服务器地址', 'error'); };
+            } catch (error) {
+                showLobbyStatus('无效的服务器地址', 'error');
+            }
+        }
+
+        function disconnectFromRoom() {
+            if (ws) ws.close();
+            else onDisconnectedFromGame();
+        }
+
+        function onDisconnectedFromGame() {
+            ws = null;
+            isConnected = false;
+            myPlayerNumber = -1;
+            isMyTurn = false;
+            shotAuthorityPlayer = null;
+            document.getElementById('turnChip').style.display = 'none';
+            document.getElementById('currentPlayerLabel').textContent = '身份：未分配';
+            document.getElementById('currentRoom').textContent = '房间：-';
+            document.getElementById('playersStatus').textContent = '玩家：0/2';
+            updateLobbyUI(false);
+            showLobbyStatus('连接已断开', 'error');
+            updateUI();
+        }
+
+        function handleOnlineMessage(data) {
+            switch (data.type) {
+                case 'sound':
+                    playRemoteSound(data);
+                    break;
+                case 'joined':
+                    clientId = data.clientId;
+                    myPlayerNumber = data.player;
+                    isConnected = true;
+                    showLobbyStatus('已连接', 'connected');
+                    updateLobbyUI(true);
+                    document.getElementById('currentRoom').textContent = '房间：' + onlineRoomId;
+                    document.getElementById('currentPlayerLabel').textContent = '身份：玩家' + (myPlayerNumber + 1);
+                    updateLobbyPlayers(data.players);
+                    break;
+                case 'room-update':
+                    updateLobbyPlayers(data.players);
+                    if (data.notice) showLobbyStatus(data.notice, '');
+                    break;
+                case 'game-started':
+                    myPlayerNumber = data.player;
+                    applyServerState(data.state, 'game-started');
+                    showMessage(isMyTurn ? '你的回合：请放置白球' : '等待玩家1放置白球');
+                    break;
+                case 'state':
+                    if (data.state && data.state.partial === 'motion') {
+                        applyMotionState(data.state);
+                    } else {
+                        applyServerState(data.state, data.reason);
+                    }
+                    break;
+                case 'state-update':
+                    applyServerState(data.state, 'legacy-state');
+                    break;
+                case 'error':
+                    showLobbyStatus(data.message || '服务器错误', 'error');
+                    break;
+            }
+        }
+
+        function getControlPlayer() {
+            return currentPlayer;
+        }
+
+        function serializeGameState() {
+            return {
+                balls: balls.map(ball => ({
+                    number: ball.number,
+                    type: ball.type,
+                    x: ball.x,
+                    y: ball.y,
+                    vx: ball.vx,
+                    vy: ball.vy,
+                    sideSpin: ball.sideSpin || 0
+                })),
+                scores: [...scores],
+                currentPlayer,
+                controlPlayer: getControlPlayer(),
+                playerGroups: [...playerGroups],
+                currentBreak,
+                phase,
+                consecutiveFouls: [...consecutiveFouls],
+                freeBallMode,
+                freeBallTargetNumber: freeBallTarget ? freeBallTarget.number : null,
+                isPlacingBall,
+                ballMoving,
+                allBallsStopped,
+                gameStarted,
+                pushOutAvailable,
+                awaitingPushOutDecision,
+                pushOutDecisionPlayer,
+                frameStarter,
+                shotAuthorityPlayer,
+                message: lastMessage
+            };
+        }
+
+        function serializeMotionState() {
+            return {
+                partial: 'motion',
+                balls: balls.map(ball => ({
+                    number: ball.number,
+                    type: ball.type,
+                    x: ball.x,
+                    y: ball.y,
+                    vx: ball.vx,
+                    vy: ball.vy
+                })),
+                ballMoving,
+                allBallsStopped,
+                shotAuthorityPlayer,
+                message: lastMessage
+            };
+        }
+
+        function sendGameStateToServer(reason) {
+            if (!isConnected || applyingRemoteState || !ws || ws.readyState !== WebSocket.OPEN) return;
+            lastStateBroadcastAt = Date.now();
+            ws.send(JSON.stringify({
+                type: 'state',
+                reason: reason || 'state-update',
+                state: serializeGameState()
+            }));
+        }
+
+        function sendMotionStateToServer() {
+            if (!isConnected || applyingRemoteState || myPlayerNumber !== shotAuthorityPlayer
+                || !ws || ws.readyState !== WebSocket.OPEN) return;
+            const now = Date.now();
+            if (now - lastStateBroadcastAt < 50) return;
+            lastStateBroadcastAt = now;
+            ws.send(JSON.stringify({ type: 'state', reason: 'shot-update', state: serializeMotionState() }));
+        }
+
+        function applyServerState(state, reason) {
+            if (!state || !Array.isArray(state.balls)) return;
+            applyingRemoteState = true;
+            balls = [];
+            whiteBall = null;
+            state.balls.forEach(data => {
+                const ball = createBall(data.x, data.y, BALL_COLORS[data.number] || '#ffffff', data.type, data.number);
+                ball.vx = data.vx || 0;
+                ball.vy = data.vy || 0;
+                ball.sideSpin = data.sideSpin || 0;
+                balls.push(ball);
+                if (data.type === 'white') whiteBall = ball;
+            });
+            scores = Array.isArray(state.scores) ? [...state.scores] : [0, 0];
+            currentPlayer = state.currentPlayer === 1 ? 1 : 0;
+            playerGroups = Array.isArray(state.playerGroups) ? [...state.playerGroups] : [null, null];
+            phase = state.phase || 'normal';
+            currentBreak = state.currentBreak || 0;
+            consecutiveFouls = Array.isArray(state.consecutiveFouls) ? [...state.consecutiveFouls] : [0, 0];
+            freeBallMode = !!state.freeBallMode;
+            isPlacingBall = !!state.isPlacingBall;
+            ballMoving = !!state.ballMoving;
+            allBallsStopped = state.allBallsStopped !== false;
+            gameStarted = !!state.gameStarted;
+            pushOutAvailable = !!state.pushOutAvailable;
+            awaitingPushOutDecision = !!state.awaitingPushOutDecision;
+            pushOutDecisionPlayer = state.pushOutDecisionPlayer === 0 || state.pushOutDecisionPlayer === 1
+                ? state.pushOutDecisionPlayer
+                : null;
+            frameStarter = state.frameStarter === 1 ? 1 : 0;
+            shotAuthorityPlayer = state.shotAuthorityPlayer === 0 || state.shotAuthorityPlayer === 1
+                ? state.shotAuthorityPlayer
+                : null;
+            freeBallTarget = state.freeBallTargetNumber === null || state.freeBallTargetNumber === undefined
+                ? null
+                : balls.find(ball => ball.number === state.freeBallTargetNumber) || null;
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
+            if (reason === 'shot-start') startShotReplayCapture();
+            if (reason === 'shot-result' || reason === 'push-out-decision' || reason === 'rack-won') {
+                finalizeShotReplayCapture();
+            }
+            if (state.message) showMessage(state.message);
+            applyingRemoteState = false;
+            updateUI();
+        }
+
+        function applyMotionState(state) {
+            if (!state || !Array.isArray(state.balls)) return;
+            applyingRemoteState = true;
+            const incoming = new Map(state.balls.map(ball => [ball.number, ball]));
+            balls = balls.filter(ball => incoming.has(ball.number));
+            balls.forEach(ball => {
+                const data = incoming.get(ball.number);
+                ball.x = data.x;
+                ball.y = data.y;
+                ball.vx = data.vx || 0;
+                ball.vy = data.vy || 0;
+            });
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+            ballMoving = !!state.ballMoving;
+            allBallsStopped = state.allBallsStopped !== false;
+            shotAuthorityPlayer = state.shotAuthorityPlayer;
+            if (state.message) showMessage(state.message);
+            captureShotReplayFrame();
+            applyingRemoteState = false;
+        }
+
+        function updateLobbyUI(connected) {
+            document.getElementById('connectBtn').classList.toggle('hidden', connected);
+            document.getElementById('disconnectBtn').classList.toggle('hidden', !connected);
+            document.getElementById('serverUrl').disabled = connected;
+            document.getElementById('roomId').disabled = connected;
+        }
+
+        function updateLobbyPlayers(players) {
+            const count = Array.isArray(players) ? players.filter(Boolean).length : 0;
+            document.getElementById('playersStatus').textContent = '玩家：' + count + '/2';
+        }
+
+        function showLobbyStatus(message, type) {
+            const status = document.getElementById('lobbyStatus');
+            status.textContent = message;
+            status.className = 'lobby-status' + (type ? ' ' + type : '');
+        }
+
+        function getDefaultServerUrl() {
+            if (location.hostname.endsWith('github.io')) {
+                return 'wss://chinese-eight-ball.onrender.com';
+            }
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                const socketProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                return `${socketProtocol}//${location.host}`;
+            }
+            return 'ws://localhost:3000';
+        }
+
+        function makeRoomId() {
+            return 'room-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        async function copyInviteLink() {
+            const roomInput = document.getElementById('roomId');
+            if (!roomInput.value.trim()) roomInput.value = makeRoomId();
+            const url = new URL(location.href);
+            url.searchParams.set('room', roomInput.value.trim());
+            url.searchParams.set('server', document.getElementById('serverUrl').value.trim());
+            try {
+                await navigator.clipboard.writeText(url.toString());
+                showLobbyStatus('邀请链接已复制', 'connected');
+            } catch (error) {
+                showLobbyStatus('复制失败，请复制浏览器地址', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const room = urlParams.get('room');
+            const server = urlParams.get('server');
+            document.getElementById('roomId').value = room || makeRoomId();
+            document.getElementById('serverUrl').value = server || getDefaultServerUrl();
+            updateLobbyUI(false);
+        });
+
+        // ============================================================
+        //  GAME FUNCTIONS
+        // ============================================================
+        function getShotSpeed(powerPercent) {
+            const power = Math.max(0, Math.min(100, powerPercent)) / 100;
+            return power * (BASE_SHOT_SPEED + HIGH_POWER_BOOST * power);
+        }
+
+        function getGameAudioContext() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!audioContext) audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') audioContext.resume();
+            return audioContext;
+        }
+
+        function playTone(frequency, endFrequency, duration, volume, type) {
+            const audio = getGameAudioContext();
+            if (!audio) return;
+            const now = audio.currentTime;
+            const oscillator = audio.createOscillator();
+            const gain = audio.createGain();
+            oscillator.type = type || 'sine';
+            oscillator.frequency.setValueAtTime(Math.max(20, frequency), now);
+            oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+            gain.gain.setValueAtTime(Math.max(0.0001, volume), now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            oscillator.connect(gain);
+            gain.connect(audio.destination);
+            oscillator.start(now);
+            oscillator.stop(now + duration);
+        }
+
+        function playCueStrikeSound(powerPercent) {
+            const strength = Math.max(0.15, Math.min(1, powerPercent / 100));
+            playTone(420, 190, 0.032, 0.045 + strength * 0.075, 'triangle');
+            playTone(2400, 1250, 0.012, 0.018 + strength * 0.028, 'sine');
+            sendOnlineSound('cue', powerPercent, 'white');
+        }
+
+        function playBallCollisionSound(impactSpeed) {
+            if (impactSpeed < 0.18) return;
+            const now = performance.now();
+            if (now - lastBallSoundAt < 12) return;
+            lastBallSoundAt = now;
+            const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
+            playTone(1750 + strength * 520, 980, 0.018, 0.03 + strength * 0.075, 'sine');
+            playTone(3100, 1800, 0.008, 0.008 + strength * 0.018, 'triangle');
+            sendOnlineSound('ball', strength * 100, 'color');
+        }
+
+        function playCushionSound(impactSpeed) {
+            if (impactSpeed < 0.25) return;
+            const now = performance.now();
+            if (now - lastCushionSoundAt < 18) return;
+            lastCushionSoundAt = now;
+            const strength = Math.min(1, impactSpeed / BASE_SHOT_SPEED);
+            playTone(520, 245, 0.034, 0.018 + strength * 0.048, 'triangle');
+            playTone(1350, 720, 0.012, 0.008 + strength * 0.016, 'sine');
+            sendOnlineSound('cushion', strength * 100, 'color');
+        }
+
+        function playPocketSound(ball) {
+            const pitch = ball.type === 'white' ? 115 : 145;
+            playTone(pitch, 55, 0.16, 0.085, 'sine');
+            playTone(820, 280, 0.045, 0.032, 'triangle');
+            sendOnlineSound('pocket', 70, ball.type === 'white' ? 'white' : 'color');
+        }
+
+        function sendOnlineSound(sound, intensity, detail) {
+            if (!isConnected || myPlayerNumber !== shotAuthorityPlayer
+                || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'sound', sound, intensity, detail }));
+        }
+
+        function playRemoteSound(data) {
+            const strength = Math.max(0.1, Math.min(1, (Number(data.intensity) || 50) / 100));
+            if (data.sound === 'cue') {
+                playTone(420, 190, 0.032, 0.045 + strength * 0.075, 'triangle');
+                playTone(2400, 1250, 0.012, 0.018 + strength * 0.028, 'sine');
+            } else if (data.sound === 'ball') {
+                playTone(1750 + strength * 520, 980, 0.018, 0.03 + strength * 0.075, 'sine');
+            } else if (data.sound === 'cushion') {
+                playTone(520, 245, 0.034, 0.018 + strength * 0.048, 'triangle');
+            } else if (data.sound === 'pocket') {
+                playTone(data.detail === 'white' ? 115 : 145, 55, 0.16, 0.085, 'sine');
+            }
+        }
+
+        function setGuideMode(mode) {
+            guideMode = mode;
+            document.getElementById('guideOff').className = 'guide-btn' + (mode === 'off' ? ' active' : '');
+            document.getElementById('guideLong').className = 'guide-btn' + (mode === 'long' ? ' active' : '');
+            document.getElementById('guideShort').className = 'guide-btn' + (mode === 'short' ? ' active' : '');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('table');
+            ctx = canvas.getContext('2d');
+            initGameConstants();
+            canvas.width = TABLE_WIDTH;
+            canvas.height = TABLE_HEIGHT;
+            initResponsiveTable();
+            initGame();
+            initControls();
+            drawDirectionTicks();
+            canvas.addEventListener('click', handleCanvasClick);
+            gameLoop();
+        });
+
+        function fitTableToStage() {
+            if (!canvas) return;
+            if (!window.matchMedia('(min-width: 1181px)').matches) {
+                canvas.style.width = '';
+                canvas.style.height = '';
+                return;
+            }
+            const stage = canvas.closest('.table-stage');
+            if (!stage || !stage.clientWidth) return;
+            const style = getComputedStyle(canvas);
+            const column = stage.parentElement;
+            const columnStyle = getComputedStyle(column);
+            const infoPanel = stage.nextElementSibling;
+            const rowGap = parseFloat(columnStyle.rowGap) || 0;
+            const borderWidth = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+            const borderHeight = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+            const availableWidth = Math.max(0, stage.clientWidth - borderWidth);
+            const availableHeight = Math.max(0, column.clientHeight - (infoPanel?.offsetHeight || 0) - rowGap - borderHeight);
+            const aspectRatio = canvas.width / canvas.height;
+            const displayWidth = Math.min(availableWidth, availableHeight * aspectRatio);
+            canvas.style.width = Math.floor(displayWidth) + 'px';
+            canvas.style.height = Math.floor(displayWidth / aspectRatio) + 'px';
+        }
+
+        function initResponsiveTable() {
+            const appShell = document.querySelector('.app-shell');
+            const infoPanel = canvas.closest('.table-stage')?.nextElementSibling;
+            let pendingFrame = 0;
+            const scheduleFit = () => {
+                if (pendingFrame) return;
+                pendingFrame = requestAnimationFrame(() => { pendingFrame = 0; fitTableToStage(); });
+            };
+            if ('ResizeObserver' in window) {
+                const resizeObserver = new ResizeObserver(scheduleFit);
+                if (appShell) resizeObserver.observe(appShell);
+                if (infoPanel) resizeObserver.observe(infoPanel);
+            }
+            window.addEventListener('resize', scheduleFit);
+            if (document.fonts?.ready) document.fonts.ready.then(scheduleFit);
+            scheduleFit();
+        }
+
+        function initGameConstants() {
+            SCALE = 0.2;
+            TABLE_INNER_LENGTH = Math.round(2540 * SCALE);
+            TABLE_INNER_WIDTH = Math.round(1270 * SCALE);
+            BORDER = Math.round(30 * SCALE);
+            TABLE_WIDTH = TABLE_INNER_LENGTH + BORDER * 2;
+            TABLE_HEIGHT = TABLE_INNER_WIDTH + BORDER * 2;
+            BALL_RADIUS = Math.round(52.5 * SCALE / 2);
+            FRICTION = 0.985;
+            HOLE_RADIUS = Math.max(BALL_RADIUS + 4, Math.round(52.5 * SCALE));
+            BALL_DIAMETER = BALL_RADIUS * 2;
+            D_ZONE_RADIUS = Math.round(292 * SCALE);
+            BAULK_LINE_X = BORDER + Math.round(TABLE_INNER_LENGTH / 4);
+            D_ZONE_CENTER_X = BAULK_LINE_X;
+            D_ZONE_CENTER_Y = TABLE_HEIGHT / 2;
+            const offset = HOLE_RADIUS * 0.3;
+            holes = [
+                { x: BORDER - offset, y: BORDER - offset },
+                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER - offset * 1.2 },
+                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER - offset },
+                { x: BORDER - offset, y: BORDER + TABLE_INNER_WIDTH + offset },
+                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER + TABLE_INNER_WIDTH + offset * 1.2 },
+                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER + TABLE_INNER_WIDTH + offset }
+            ];
+        }
+
+        function initGame() {
+            balls = [];
+            scores = [0, 0];
+            currentPlayer = frameStarter;
+            playerGroups = [null, null];
+            currentBreak = 0;
+            phase = 'break';
+            pottedThisShot = [];
+            foul = false;
+            foulType = '';
+            isPlacingBall = true;
+            ballMoving = false;
+            gameStarted = false;
+            allBallsStopped = true;
+            freeBallMode = false;
+            freeBallTarget = null;
+            shotSnapshot = null;
+            shotContext = null;
+            currentShotReplay = [];
+            lastShotReplay = [];
+            replayRestoreFrame = null;
+            isReplaying = false;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
+            consecutiveFouls = [0, 0];
+            breakCushionCount = 0;
+            breakCushionBalls.clear();
+            pushOutAvailable = false;
+            awaitingPushOutDecision = false;
+            pushOutDecisionPlayer = null;
+            shotAuthorityPlayer = null;
+            setupRackBalls();
+
+            cueAngle = 0;
+            cuePower = 0;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            activeShotSpinX = 0;
+            activeShotSpinY = 0;
+            activeShotAngle = 0;
+            activeShotSpeed = 0;
+            shotSpinApplied = false;
+            updatePowerGauge();
+            updateDirectionHandle();
+            updateSpinControl();
+            updateUI();
+            showMessage(isConnected ? '玩家1：请在D区放置白球开球' : '请先连接联机房间');
+        }
+
+        function setupRackBalls() {
+            balls = [];
+            whiteBall = createBall(D_ZONE_CENTER_X, TABLE_HEIGHT / 2, '#ffffff', 'white', 0);
+            balls.push(whiteBall);
+            const rackX = BORDER + TABLE_INNER_LENGTH * 0.75;
+            const rackY = TABLE_HEIGHT / 2;
+            const spacing = BALL_RADIUS * 2.05;
+            const rackPositions = [
+                { row: 0, col: 0 },
+                { row: 1, col: -1 }, { row: 1, col: 1 },
+                { row: 2, col: -2 }, { row: 2, col: 0 }, { row: 2, col: 2 },
+                { row: 3, col: -3 }, { row: 3, col: -1 }, { row: 3, col: 1 }, { row: 3, col: 3 },
+                { row: 4, col: -4 }, { row: 4, col: -2 }, { row: 4, col: 0 }, { row: 4, col: 2 }, { row: 4, col: 4 }
+            ];
+            const ballNumbers = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 6, 13, 7, 14, 15];
+            rackPositions.forEach((pos, index) => {
+                const x = rackX + pos.row * spacing * 0.866;
+                const y = rackY + pos.col * spacing / 2;
+                const ballNumber = ballNumbers[index];
+                balls.push(createBall(x, y, BALL_COLORS[ballNumber], 'numbered', ballNumber));
+            });
+        }
+
+        function createBall(x, y, color, type, number) {
+            return { x, y, vx: 0, vy: 0, sideSpin: 0, color, type, number, defaultX: x, defaultY: y };
+        }
+
+        function getRemainingGroupBalls(group, sourceBalls) {
+            const src = sourceBalls || balls;
+            return src.filter(ball => ball.type === 'numbered' && getBallGroup(ball.number) === group);
+        }
+
+        function hasClearedGroup(player, sourceBalls, groups) {
+            const groupList = groups || playerGroups;
+            const group = groupList[player];
+            return !!group && getRemainingGroupBalls(group, sourceBalls || balls).length === 0;
+        }
+
+        function getLegalTargetNumbers(player, context) {
+            const ctx = context || { phase, playerGroups: [...playerGroups], balls };
+            const src = ctx.balls || balls;
+            const groups = ctx.playerGroups || playerGroups;
+            if (ctx.phase === 'break') {
+                return src.filter(ball => ball.type === 'numbered').map(ball => ball.number);
+            }
+            const group = groups[player ?? currentPlayer];
+            if (!group) {
+                return src
+                    .filter(ball => ball.type === 'numbered' && getBallGroup(ball.number) !== 'eight')
+                    .map(ball => ball.number);
+            }
+            if (hasClearedGroup(player ?? currentPlayer, src, groups)) {
+                return src.filter(ball => ball.type === 'numbered' && ball.number === 8).map(ball => ball.number);
+            }
+            return src
+                .filter(ball => ball.type === 'numbered' && getBallGroup(ball.number) === group)
+                .map(ball => ball.number);
+        }
+
+        function isLegalFirstHit(ball, context) {
+            if (!ball || ball.type !== 'numbered') return false;
+            const legalNumbers = context?.legalTargetNumbers || getLegalTargetNumbers(currentPlayer, context);
+            return legalNumbers.includes(ball.number);
+        }
+
+        function resetShotTracking() {
+            pottedThisShot = [];
+            foul = false;
+            foulType = '';
+            shotStarted = false;
+            firstBallHit = null;
+            shotContext = null;
+        }
+
+        function captureShotContext() {
+            const groups = [...playerGroups];
+            const contextBalls = [...balls];
+            return {
+                phase,
+                playerGroups: groups,
+                balls: contextBalls,
+                legalTargetNumbers: getLegalTargetNumbers(currentPlayer, { phase, playerGroups: groups, balls: contextBalls }),
+                canShootEight: hasClearedGroup(currentPlayer, contextBalls, groups),
+                freeBallMode,
+                freeBallTarget
+            };
+        }
+
+        function captureShotSnapshot() {
+            return {
+                balls: balls.map(ball => ({
+                    x: ball.x, y: ball.y, vx: 0, vy: 0,
+                    color: ball.color, type: ball.type, number: ball.number,
+                    defaultX: ball.defaultX, defaultY: ball.defaultY,
+                    isWhite: ball === whiteBall
+                })),
+                phase, playerGroups: [...playerGroups], isPlacingBall, consecutiveFouls: [...consecutiveFouls]
+            };
+        }
+
+        function restoreShotSnapshot(snapshot) {
+            if (!snapshot) return;
+            balls = snapshot.balls.map(data => {
+                const ball = createBall(data.x, data.y, data.color, data.type, data.number);
+                ball.vx = 0; ball.vy = 0;
+                ball.defaultX = data.defaultX; ball.defaultY = data.defaultY;
+                return ball;
+            });
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+            phase = snapshot.phase;
+            playerGroups = Array.isArray(snapshot.playerGroups) ? [...snapshot.playerGroups] : [null, null];
+            isPlacingBall = snapshot.isPlacingBall;
+            consecutiveFouls = snapshot.consecutiveFouls || [0, 0];
+            ballMoving = false;
+            allBallsStopped = true;
+        }
+
+        function initControls() {
+            const directionControl = document.getElementById('directionControl');
+            const powerContainer = document.getElementById('powerContainer');
+            const spinControl = document.getElementById('spinControl');
+
+            directionControl.addEventListener('mousedown', (e) => {
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
+                directionControlActive = true;
+                updateDirectionFromControl(e);
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (directionControlActive) updateDirectionFromControl(e);
+                if (powerControlActive) updatePowerFromGauge(e);
+            });
+            document.addEventListener('mouseup', () => {
+                directionControlActive = false;
+                powerControlActive = false;
+            });
+
+            spinControl.addEventListener('pointerdown', (e) => {
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
+                spinControlActive = true;
+                updateSpinFromControl(e);
+                spinControl.setPointerCapture?.(e.pointerId);
+            });
+            document.addEventListener('pointermove', (e) => {
+                if (spinControlActive) updateSpinFromControl(e);
+            });
+            document.addEventListener('pointerup', () => { spinControlActive = false; });
+
+            powerContainer.addEventListener('mousedown', (e) => {
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
+                powerControlActive = true;
+                updatePowerFromGauge(e);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (!isConnected || !isMyTurn || isTableInMotion() || !gameStarted) return;
+                const step = e.shiftKey ? 0.001745 : 0.01745;
+                if (e.key === 'ArrowLeft') cueAngle -= step;
+                if (e.key === 'ArrowRight') cueAngle += step;
+                if (e.key === 'ArrowUp' && cuePower < 100) cuePower += 1;
+                if (e.key === 'ArrowDown' && cuePower > 0) cuePower -= 1;
+                if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); shoot(); }
+                updatePowerGauge();
+                updateDirectionHandle();
+                updateAngleDisplay();
+            });
+        }
+
+        function updateDirectionFromControl(e) {
+            const control = document.getElementById('directionControl');
+            const rect = control.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            cueAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            updateDirectionHandle();
+            updateAngleDisplay();
+        }
+
+        function updateAngleDisplay() {
+            document.getElementById('angleDisplay').textContent = (-cueAngle * 180 / Math.PI).toFixed(2) + '°';
+        }
+
+        function updateDirectionHandle() {
+            const handle = document.getElementById('directionHandle');
+            const control = document.getElementById('directionControl');
+            const radius = Math.max(0, (control.clientWidth || 200) / 2 - 15);
+            handle.style.left = 'calc(50% + ' + (Math.cos(cueAngle) * radius) + 'px)';
+            handle.style.top = 'calc(50% + ' + (Math.sin(cueAngle) * radius) + 'px)';
+        }
+
+        function updatePowerFromGauge(e) {
+            const container = document.getElementById('powerContainer');
+            const rect = container.getBoundingClientRect();
+            cuePower = Math.max(0, Math.min(100, ((rect.bottom - e.clientY) / (rect.height - 20)) * 100));
+            updatePowerGauge();
+        }
+
+        function updatePowerGauge() {
+            document.getElementById('powerGauge').style.height = cuePower + '%';
+            document.getElementById('powerLabel').textContent = Math.round(cuePower);
+        }
+
+        function updateSpinFromControl(e) {
+            const control = document.getElementById('spinControl');
+            const rect = control.getBoundingClientRect();
+            const radius = Math.min(rect.width, rect.height) * 0.38;
+            let dx = e.clientX - (rect.left + rect.width / 2);
+            let dy = e.clientY - (rect.top + rect.height / 2);
+            const distance = Math.hypot(dx, dy);
+            if (distance > radius) { dx = dx / distance * radius; dy = dy / distance * radius; }
+            cueSpinX = dx / radius;
+            cueSpinY = -dy / radius;
+            updateSpinControl();
+        }
+
+        function updateSpinControl() {
+            const handle = document.getElementById('spinHandle');
+            const value = document.getElementById('spinValue');
+            if (!handle || !value) return;
+            handle.style.left = 'calc(50% + ' + (cueSpinX * 50) + 'px)';
+            handle.style.top = 'calc(50% - ' + (cueSpinY * 50) + 'px)';
+            const labels = [];
+            if (Math.abs(cueSpinY) >= 0.08) labels.push((cueSpinY > 0 ? '高杆' : '低杆') + ' ' + Math.round(Math.abs(cueSpinY) * 100) + '%');
+            if (Math.abs(cueSpinX) >= 0.08) labels.push((cueSpinX > 0 ? '右塞' : '左塞') + ' ' + Math.round(Math.abs(cueSpinX) * 100) + '%');
+            value.textContent = labels.length ? labels.join(' · ') : '中心击球';
+        }
+
+        function resetCueSpin() {
+            if (!isConnected || !isMyTurn || isTableInMotion()) return;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            updateSpinControl();
+        }
+
+        function handleCanvasClick(e) {
+            if (!isConnected) {
+                showMessage('请先连接联机房间');
+                return;
+            }
+            if (!isMyTurn) {
+                showMessage('当前由对手操作');
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const style = getComputedStyle(canvas);
+            const borderLeft = parseFloat(style.borderLeftWidth);
+            const borderTop = parseFloat(style.borderTopWidth);
+            const contentWidth = rect.width - borderLeft - parseFloat(style.borderRightWidth);
+            const contentHeight = rect.height - borderTop - parseFloat(style.borderBottomWidth);
+            const mx = (e.clientX - rect.left - borderLeft) * canvas.width / contentWidth;
+            const my = (e.clientY - rect.top - borderTop) * canvas.height / contentHeight;
+
+            if (isPlacingBall && !isTableInMotion()) {
+                const isValid = freeBallMode ? isValidAnyPosition(mx, my) : isValidBallPosition(mx, my);
+                if (isValid) {
+                    whiteBall.x = mx;
+                    whiteBall.y = my;
+                    isPlacingBall = false;
+                    if (freeBallMode) {
+                        freeBallMode = false;
+                        freeBallTarget = null;
+                        gameStarted = true;
+                        updateUI();
+                        showMessage('玩家' + (currentPlayer + 1) + '：白球已放置，调整方向和力度后点击"出杆"');
+                    } else {
+                        gameStarted = true;
+                        updateUI();
+                        showMessage('玩家' + (currentPlayer + 1) + '：调整方向和力度后点击"出杆"');
+                    }
+                    sendGameStateToServer('ball-placement');
+                } else {
+                    showMessage(freeBallMode ? '请将白球放置在台面有效区域内' : '请将白球放置在发球线后');
+                }
+                return;
+            }
+
+            if (isTableInMotion() || !gameStarted) return;
+
+            cueAngle = Math.atan2(my - whiteBall.y, mx - whiteBall.x);
+            updateDirectionHandle();
+        }
+
+        function declarePushOut() {
+            showMessage('中式八球没有推杆规则');
+        }
+
+        function shoot() {
+            if (!isConnected || !isMyTurn) return;
+            if (isTableInMotion() || !gameStarted) return;
+            if (isPlacingBall) { showMessage('请先放置白球'); return; }
+            doShoot(false);
+        }
+
+        function doShoot(isPushOut) {
+            const speed = getShotSpeed(cuePower);
+            if (speed <= STOP_SPEED) {
+                showMessage('请先设置击球力度');
+                return;
+            }
+            isPushOutShot = isPushOut;
+            shotSnapshot = captureShotSnapshot();
+            shotContext = captureShotContext();
+            startShotReplayCapture();
+            activeShotSpinX = cueSpinX;
+            activeShotSpinY = cueSpinY;
+            activeShotAngle = cueAngle;
+            activeShotSpeed = speed;
+            shotSpinApplied = false;
+            shotAuthorityPlayer = currentPlayer;
+            whiteBall.sideSpin = activeShotSpinX;
+            cueSpinX = 0;
+            cueSpinY = 0;
+            updateSpinControl();
+            whiteBall.vx = Math.cos(cueAngle) * speed;
+            whiteBall.vy = Math.sin(cueAngle) * speed;
+            playCueStrikeSound(cuePower);
+            ballMoving = true;
+            allBallsStopped = false;
+            shotStarted = true;
+            firstBallHit = null;
+            pottedThisShot = [];
+            foul = false;
+            cushionContactThisShot = false;
+            if (phase === 'break') {
+                breakCushionCount = 0;
+                breakCushionBalls.clear();
+            }
+            document.getElementById('shootBtn').disabled = true;
+            showMessage('击球中...');
+            sendGameStateToServer('shot-start');
+        }
+
+        function isValidBallPosition(x, y) {
+            if (x > BAULK_LINE_X || x < BORDER + BALL_RADIUS || y < BORDER + BALL_RADIUS || y > TABLE_HEIGHT - BORDER - BALL_RADIUS) return false;
+            for (let ball of balls) {
+                if (ball === whiteBall) continue;
+                if (Math.hypot(x - ball.x, y - ball.y) < BALL_RADIUS * 2.5) return false;
+            }
+            return true;
+        }
+
+        function isValidAnyPosition(x, y) {
+            if (x < BORDER + BALL_RADIUS || x > TABLE_WIDTH - BORDER - BALL_RADIUS || y < BORDER + BALL_RADIUS || y > TABLE_HEIGHT - BORDER - BALL_RADIUS) return false;
+            for (let ball of balls) {
+                if (ball === whiteBall) continue;
+                if (Math.hypot(x - ball.x, y - ball.y) < BALL_RADIUS * 2.5) return false;
+            }
+            return true;
+        }
+
+        function updateBalls() {
+            balls.forEach(ball => {
+                ball.vx *= FRICTION;
+                ball.vy *= FRICTION;
+                ball.sideSpin = (ball.sideSpin || 0) * SIDE_SPIN_DECAY;
+            });
+            const maxSpeed = balls.reduce((max, ball) => Math.max(max, Math.hypot(ball.vx, ball.vy)), 0);
+            const substeps = Math.max(1, Math.min(8, Math.ceil(maxSpeed / Math.max(BALL_RADIUS * 0.75, 1))));
+            for (let step = 0; step < substeps; step++) {
+                const prevWhite = whiteBall && balls.includes(whiteBall) ? { x: whiteBall.x, y: whiteBall.y } : null;
+                balls.forEach(ball => {
+                    ball.x += ball.vx / substeps;
+                    ball.y += ball.vy / substeps;
+                    resolveCushionCollision(ball);
+                });
+                if (prevWhite && whiteBall && balls.includes(whiteBall)) {
+                    detectFirstBallHitAlongWhitePath(prevWhite.x, prevWhite.y, whiteBall.x, whiteBall.y);
+                }
+                if (ballMoving) checkHoles();
+                for (let i = 0; i < balls.length; i++) {
+                    for (let j = i + 1; j < balls.length; j++) {
+                        ballCollision(balls[i], balls[j]);
+                    }
+                }
+            }
+            captureShotReplayFrame();
+            sendMotionStateToServer();
+            if (!isAnyBallMoving() && ballMoving) { stopAllBalls(); ballMoving = false; }
+            if (!ballMoving && !allBallsStopped) {
+                allBallsStopped = true;
+                finalizeShotReplayCapture();
+                updateUI();
+                processShotResult();
+            }
+        }
+
+        function resolveCushionCollision(ball) {
+            let nearHole = false;
+            const holeDir = { x: 0, y: 0 };
+            holes.forEach(h => {
+                const d = Math.hypot(ball.x - h.x, ball.y - h.y);
+                if (d < HOLE_RADIUS + BALL_RADIUS * 2) {
+                    nearHole = true;
+                    if (d > 0) { holeDir.x += (ball.x - h.x) / d; holeDir.y += (ball.y - h.y) / d; }
+                }
+            });
+            if (nearHole) return;
+            let vs = 0, hs = 0;
+            if (ball.x < BORDER + BALL_RADIUS && holeDir.x < 0.5) { ball.x = BORDER + BALL_RADIUS; ball.vx *= -CUSHION_RESTITUTION; vs = -1; }
+            else if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS && holeDir.x > -0.5) { ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS; ball.vx *= -CUSHION_RESTITUTION; vs = 1; }
+            if (ball.y < BORDER + BALL_RADIUS && holeDir.y < 0.5) { ball.y = BORDER + BALL_RADIUS; ball.vy *= -CUSHION_RESTITUTION; hs = -1; }
+            else if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS && holeDir.y > -0.5) { ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS; ball.vy *= -CUSHION_RESTITUTION; hs = 1; }
+            if (ball === whiteBall && Math.abs(ball.sideSpin || 0) > 0.001) {
+                if (vs) ball.vy += ball.sideSpin * Math.abs(ball.vx) * SIDE_SPIN_CUSHION_STRENGTH * vs;
+                if (hs) ball.vx -= ball.sideSpin * Math.abs(ball.vy) * SIDE_SPIN_CUSHION_STRENGTH * hs;
+                if (vs || hs) ball.sideSpin *= 0.78;
+            }
+            if (vs || hs) {
+                cushionContactThisShot = true;
+                if (phase === 'break' && ball.type === 'numbered') {
+                    breakCushionBalls.add(ball.number);
+                    breakCushionCount = breakCushionBalls.size;
+                }
+                playCushionSound(Math.max(Math.abs(ball.vx), Math.abs(ball.vy)));
+            }
+        }
+
+        function isAnyBallMoving() {
+            return balls.some(ball => Math.hypot(ball.vx, ball.vy) > STOP_SPEED);
+        }
+
+        function isTableInMotion() {
+            return isReplaying || ballMoving || !allBallsStopped || isAnyBallMoving();
+        }
+
+        function shouldSimulateTable() {
+            return !isConnected || myPlayerNumber === shotAuthorityPlayer;
+        }
+
+        function stopAllBalls() {
+            balls.forEach(ball => { ball.vx = 0; ball.vy = 0; });
+        }
+
+        function checkHoles() {
+            const toRemove = [];
+            balls.forEach(ball => {
+                holes.forEach(h => {
+                    if (Math.hypot(ball.x - h.x, ball.y - h.y) < HOLE_RADIUS + BALL_RADIUS * 0.5) {
+                        if (!pottedThisShot.includes(ball)) { pottedThisShot.push(ball); toRemove.push(ball); playPocketSound(ball); }
+                    }
+                });
+            });
+            balls = balls.filter(b => !toRemove.includes(b));
+        }
+
+        function captureReplayFrame(src) {
+            return (src || balls).map(b => ({ id: b.id, x: b.x, y: b.y, color: b.color, type: b.type, number: b.number, defaultX: b.defaultX, defaultY: b.defaultY }));
+        }
+
+        function startShotReplayCapture() { currentShotReplay = [captureReplayFrame()]; replayCaptureCounter = 0; }
+
+        function captureShotReplayFrame(force) {
+            if (currentShotReplay.length === 0) return;
+            replayCaptureCounter++;
+            if (!force && replayCaptureCounter % REPLAY_CAPTURE_INTERVAL !== 0) return;
+            currentShotReplay.push(captureReplayFrame());
+        }
+
+        function finalizeShotReplayCapture() {
+            captureShotReplayFrame(true);
+            if (currentShotReplay.length > 1) {
+                lastShotReplay = currentShotReplay;
+            }
+            currentShotReplay = [];
+            updateReplayButton();
+        }
+
+        function applyReplayFrame(frame) {
+            balls = frame.map(data => ({
+                id: data.id, x: data.x, y: data.y, vx: 0, vy: 0,
+                color: data.color, type: data.type, number: data.number,
+                defaultX: data.defaultX, defaultY: data.defaultY
+            }));
+            whiteBall = balls.find(ball => ball.type === 'white') || null;
+        }
+
+        function replayLastShot() {
+            if (isReplaying || isTableInMotion() || lastShotReplay.length < 2) return;
+            replayRestoreFrame = { balls, whiteBall, freeBallTarget, consecutiveFouls: [...consecutiveFouls] };
+            replayRestoreMessage = lastMessage;
+            isReplaying = true;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
+            applyReplayFrame(lastShotReplay[0]);
+            showMessage('精彩回放中...');
+            updateReplayButton();
+        }
+
+        function updateReplayPlayback(timestamp) {
+            if (!isReplaying) return;
+            if (!replayLastFrameAt) { replayLastFrameAt = timestamp; return; }
+            if (timestamp - replayLastFrameAt < REPLAY_FRAME_DURATION) return;
+            replayLastFrameAt = timestamp;
+            replayFrameIndex++;
+            if (replayFrameIndex >= lastShotReplay.length) { finishReplay(); return; }
+            applyReplayFrame(lastShotReplay[replayFrameIndex]);
+        }
+
+        function finishReplay() {
+            if (replayRestoreFrame) {
+                balls = replayRestoreFrame.balls;
+                whiteBall = replayRestoreFrame.whiteBall;
+                freeBallTarget = replayRestoreFrame.freeBallTarget;
+                consecutiveFouls = replayRestoreFrame.consecutiveFouls || [0, 0];
+            }
+            replayRestoreFrame = null;
+            isReplaying = false;
+            replayFrameIndex = 0;
+            replayLastFrameAt = 0;
+            showMessage(replayRestoreMessage);
+            updateUI();
+        }
+
+        function updateReplayButton() {
+            const button = document.getElementById('replayBtn');
+            if (!button) return;
+            button.disabled = isReplaying || lastShotReplay.length < 2 || ballMoving || !allBallsStopped || isAnyBallMoving();
+            button.textContent = isReplaying ? '回放中...' : '回放';
+        }
+
+        function updatePushOutBtn() {
+            const btn = document.getElementById('pushOutBtn');
+            if (!btn) return;
+            btn.style.display = 'none';
+        }
+
+        function detectFirstBallHitAlongWhitePath(startX, startY, endX, endY) {
+            if (!shotStarted || firstBallHit || !whiteBall) return;
+            const dx = endX - startX, dy = endY - startY;
+            const a = dx * dx + dy * dy;
+            if (a <= 0) return;
+            const collisionDist = BALL_RADIUS * 2;
+            let earliestBall = null, earliestT = Infinity;
+            for (const ball of balls) {
+                if (ball === whiteBall) continue;
+                const fx = startX - ball.x, fy = startY - ball.y;
+                const b = 2 * (fx * dx + fy * dy);
+                const c = fx * fx + fy * fy - collisionDist * collisionDist;
+                const disc = b * b - 4 * a * c;
+                if (disc < 0) continue;
+                const sqrtDisc = Math.sqrt(disc);
+                const t1 = (-b - sqrtDisc) / (2 * a), t2 = (-b + sqrtDisc) / (2 * a);
+                const t = t1 >= 0 ? t1 : t2;
+                if (t >= 0 && t <= 1 && t < earliestT) { earliestT = t; earliestBall = ball; }
+            }
+            if (earliestBall) firstBallHit = earliestBall;
+        }
+
+        function ballCollision(b1, b2) {
+            const dx = b2.x - b1.x, dy = b2.y - b1.y, dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < BALL_RADIUS * 2) {
+                if (shotStarted && !firstBallHit) {
+                    if (b1 === whiteBall) firstBallHit = b2;
+                    else if (b2 === whiteBall) firstBallHit = b1;
+                }
+                const overlap = BALL_RADIUS * 2 - dist;
+                const nx = dx / dist, ny = dy / dist;
+                b1.x -= nx * overlap / 2; b1.y -= ny * overlap / 2;
+                b2.x += nx * overlap / 2; b2.y += ny * overlap / 2;
+                const dvx = b1.vx - b2.vx, dvy = b1.vy - b2.vy, dvn = dvx * nx + dvy * ny;
+                if (dvn > 0) {
+                    playBallCollisionSound(dvn);
+                    b1.vx -= dvn * nx; b1.vy -= dvn * ny;
+                    b2.vx += dvn * nx; b2.vy += dvn * ny;
+                    if (!shotSpinApplied && (b1 === whiteBall || b2 === whiteBall)) applyCueSpinAfterFirstCollision();
+                }
+            }
+        }
+
+        function applyCueSpinAfterFirstCollision() {
+            if (!whiteBall || shotSpinApplied) return;
+            const follow = activeShotSpinY * activeShotSpeed * TOP_SPIN_STRENGTH;
+            whiteBall.vx += Math.cos(activeShotAngle) * follow;
+            whiteBall.vy += Math.sin(activeShotAngle) * follow;
+            whiteBall.sideSpin = activeShotSpinX;
+            shotSpinApplied = true;
+        }
+
+        function isSpotOccupied(x, y) {
+            const tolerance = BALL_DIAMETER - 0.1;
+            for (const ball of balls) {
+                if (Math.hypot(ball.x - x, ball.y - y) < tolerance) return true;
+            }
+            return false;
+        }
+
+        function respotBallNumber(number) {
+            const targetBall = pottedThisShot.find(b => b.number === number);
+            if (!targetBall) return;
+            const spotX = BORDER + TABLE_INNER_LENGTH * 0.75, spotY = TABLE_HEIGHT / 2;
+            if (!isSpotOccupied(spotX, spotY)) {
+                targetBall.x = spotX; targetBall.y = spotY; targetBall.vx = 0; targetBall.vy = 0;
+                balls.push(targetBall); return;
+            }
+            for (let offset = BALL_DIAMETER; offset < TABLE_INNER_LENGTH / 2; offset += BALL_DIAMETER) {
+                for (const [dx, dy] of [[offset, 0], [-offset, 0], [0, offset], [0, -offset]]) {
+                    const tx = spotX + dx, ty = spotY + dy;
+                    if (tx >= BORDER + BALL_RADIUS && tx <= TABLE_WIDTH - BORDER - BALL_RADIUS &&
+                        ty >= BORDER + BALL_RADIUS && ty <= TABLE_HEIGHT - BORDER - BALL_RADIUS && !isSpotOccupied(tx, ty)) {
+                        targetBall.x = tx; targetBall.y = ty; targetBall.vx = 0; targetBall.vy = 0;
+                        balls.push(targetBall); return;
+                    }
+                }
+            }
+            targetBall.x = spotX; targetBall.y = spotY; targetBall.vx = 0; targetBall.vy = 0;
+            balls.push(targetBall);
+        }
+
+        function assignGroupsFromPots(pottedNumbered) {
+            if (playerGroups[currentPlayer]) return null;
+            const firstGroupBall = pottedNumbered.find(ball => {
+                const group = getBallGroup(ball.number);
+                return group === 'solid' || group === 'stripe';
+            });
+            if (!firstGroupBall) return null;
+            const group = getBallGroup(firstGroupBall.number);
+            playerGroups[currentPlayer] = group;
+            playerGroups[1 - currentPlayer] = getOppositeGroup(group);
+            return group;
+        }
+
+        function finishRack(winner, reason) {
+            scores[winner]++;
+            gameStarted = false;
+            shotAuthorityPlayer = null;
+            showMessage(reason + ' 玩家' + (winner + 1) + '赢得本局！比分 ' + scores[0] + ':' + scores[1]);
+            updateUI();
+            sendGameStateToServer('rack-won');
+            setTimeout(() => {
+                frameStarter = 1 - frameStarter;
+                currentPlayer = frameStarter;
+                startNewRack();
+            }, 1600);
+        }
+
+        function processShotResult() {
+            const context = shotContext || captureShotContext();
+            const pottedWhite = pottedThisShot.find(ball => ball.type === 'white');
+            const pottedNumbered = pottedThisShot.filter(ball => ball.type === 'numbered');
+            const pottedEight = pottedThisShot.find(ball => ball.number === 8);
+            const hitLegalTarget = firstBallHit && isLegalFirstHit(firstBallHit, context);
+            isPushOutShot = false;
+            pushOutAvailable = false;
+
+            let foulTypes = [];
+            const addFoul = (reason) => { foulTypes.push(reason); };
+
+            if (!firstBallHit) addFoul('空杆');
+            else if (!hitLegalTarget) {
+                addFoul('未先击中合法目标球（' + getTargetText(context) + '）');
+            } else if (pottedNumbered.length === 0 && !cushionContactThisShot) {
+                addFoul('未触库：球未入袋且无球碰库');
+            }
+            if (pottedWhite) addFoul('白球落袋');
+
+            let breakIllegal = false;
+            if (phase === 'break' && foulTypes.length === 0) {
+                if (pottedNumbered.length === 0 && breakCushionCount < 4) breakIllegal = true;
+            }
+
+            if (pottedEight && phase === 'break') {
+                respotBallNumber(8);
+            } else if (pottedEight) {
+                if (foulTypes.length > 0 || !context.canShootEight || !hitLegalTarget) {
+                    finishRack(1 - currentPlayer, '玩家' + (currentPlayer + 1) + '非法打进黑八。');
+                } else {
+                    finishRack(currentPlayer, '玩家' + (currentPlayer + 1) + '合法打进黑八。');
+                }
+                return;
+            }
+
+            if (breakIllegal) {
+                showMessage('开球违规：无球入袋，仅 ' + breakCushionCount + ' 球碰库（需≥4）。对手获得自由球');
+                handleFoul(['开球违规（仅' + breakCushionCount + '球碰库）'], { pottedEight: !!pottedEight, pottedWhite: !!pottedWhite });
+                return;
+            }
+
+            if (foulTypes.length > 0) {
+                handleFoul(foulTypes, { pottedEight: !!pottedEight, pottedWhite: !!pottedWhite });
+                return;
+            }
+
+            if (pottedEight && phase === 'break') showMessage('开球进黑八：黑八已放回置球点');
+
+            if (pottedNumbered.length > 0) {
+                const wasBreakShot = context.phase === 'break';
+                consecutiveFouls[currentPlayer] = 0;
+                if (wasBreakShot) phase = 'open';
+                if (!wasBreakShot && phase === 'open') {
+                    const assignedGroup = assignGroupsFromPots(pottedNumbered);
+                    if (assignedGroup) {
+                        phase = 'normal';
+                        showMessage('玩家' + (currentPlayer + 1) + '确定为' + getGroupName(assignedGroup) + '，继续击球');
+                    }
+                }
+                const ownGroup = playerGroups[currentPlayer];
+                const ownPotted = pottedNumbered.filter(ball => getBallGroup(ball.number) === ownGroup);
+                if (wasBreakShot || ownPotted.length > 0) {
+                    currentBreak += Math.max(ownPotted.length, pottedNumbered.filter(ball => ball.number !== 8).length);
+                    shotAuthorityPlayer = null;
+                    if (wasBreakShot) showMessage('开球合法进球，开放球局继续');
+                    else if (phase !== 'normal') showMessage('合法进球，开放球局继续');
+                    else showMessage('打进' + ownPotted.length + '颗' + getGroupName(ownGroup) + '，继续击球');
+                    updateUI();
+                    resetShotTracking();
+                    sendGameStateToServer('shot-result');
+                    return;
+                }
+            }
+
+            if (phase === 'break') phase = 'open';
+            endTurn();
+            resetShotTracking();
+            shotAuthorityPlayer = null;
+            sendGameStateToServer('shot-result');
+        }
+
+        function isBallOn(ball, context) {
+            const ctx = context || captureShotContext();
+            if (!ball) return false;
+            return isLegalFirstHit(ball, ctx);
+        }
+
+        function getTargetText(context) {
+            const ctx = context || { phase, playerGroups: [...playerGroups], balls, legalTargetNumbers: getLegalTargetNumbers(currentPlayer) };
+            if (ctx.phase === 'break') return '任意目标球';
+            const groups = ctx.playerGroups || playerGroups;
+            const group = groups[currentPlayer];
+            if (!group) return '全色或花色球';
+            if (ctx.canShootEight || hasClearedGroup(currentPlayer, ctx.balls || balls, groups)) return '黑八';
+            return getGroupName(group);
+        }
+
+        function clearFreeBall() {
+            freeBallMode = false;
+            freeBallTarget = null;
+        }
+
+        function handleFoul(foulTypes, options) {
+            const foulingPlayer = currentPlayer;
+            const otherPlayer = 1 - foulingPlayer;
+            currentBreak = 0;
+            pushOutAvailable = false;
+            consecutiveFouls[foulingPlayer]++;
+            if (options.pottedWhite) {
+                whiteBall.x = D_ZONE_CENTER_X; whiteBall.y = TABLE_HEIGHT / 2;
+                whiteBall.vx = 0; whiteBall.vy = 0;
+                if (!balls.includes(whiteBall)) balls.push(whiteBall);
+            }
+            pottedThisShot = [];
+            shotStarted = false;
+            firstBallHit = null;
+            shotContext = null;
+            currentPlayer = otherPlayer;
+            phase = playerGroups[0] && playerGroups[1] ? 'normal' : 'open';
+            freeBallMode = true;
+            isPlacingBall = true;
+            shotAuthorityPlayer = null;
+            isMyTurn = myPlayerNumber === getControlPlayer();
+            showMessage('犯规（' + foulTypes.join('+') + '）！玩家' + (otherPlayer + 1)
+                + '获得自由球，请在台面任意位置点击放置白球');
+            updateUI();
+            sendGameStateToServer('shot-result');
+        }
+
+        function resetWhiteBall() {
+            const index = balls.indexOf(whiteBall);
+            if (index === -1) {
+                whiteBall.x = D_ZONE_CENTER_X; whiteBall.y = TABLE_HEIGHT / 2;
+                whiteBall.vx = 0; whiteBall.vy = 0;
+                balls.push(whiteBall);
+            } else {
+                whiteBall.x = D_ZONE_CENTER_X; whiteBall.y = TABLE_HEIGHT / 2;
+                whiteBall.vx = 0; whiteBall.vy = 0;
+            }
+            isPlacingBall = true;
+        }
+
+        function startNewRack() {
+            const prevScores = [...scores];
+            const breaker = currentPlayer;
+            initGame();
+            scores = prevScores;
+            currentPlayer = breaker;
+            frameStarter = breaker;
+            pushOutAvailable = false;
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
+            showMessage('新的一局开始！玩家' + (breaker + 1) + '开球，请在D区放置白球');
+            updateUI();
+            sendGameStateToServer('new-rack');
+        }
+
+        function endGame() {
+            freeBallMode = false;
+            freeBallTarget = null;
+            const winner = scores[0] > scores[1] ? 1 : 2;
+            showMessage('比赛结束！玩家' + winner + '获胜！比分 ' + scores[0] + ':' + scores[1]);
+            gameStarted = false;
+            ballMoving = false;
+            document.getElementById('shootBtn').disabled = true;
+            updateUI();
+        }
+
+        function endTurn() {
+            if (currentBreak > 0) showMessage('玩家' + (currentPlayer + 1) + '连续得分：' + currentBreak);
+            currentPlayer = 1 - currentPlayer;
+            currentBreak = 0;
+            freeBallMode = false;
+            freeBallTarget = null;
+            phase = playerGroups[0] && playerGroups[1] ? 'normal' : 'open';
+            updateUI();
+            if (gameStarted) {
+                setTimeout(() => { showMessage('玩家' + (currentPlayer + 1) + '的回合'); }, 800);
+            }
+        }
+
+        function resetGame() {
+            if (isReplaying) { showMessage('请等待回放结束'); return; }
+            if (!isConnected) { showMessage('请先连接联机房间'); return; }
+            if (myPlayerNumber !== 0) { showMessage('只有玩家1可以重置联机房间'); return; }
+            frameStarter = 0;
+            initGame();
+            currentPlayer = 0;
+            isMyTurn = true;
+            showMessage('游戏重置！');
+            updateUI();
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'reset-game', state: serializeGameState() }));
+            }
+        }
+
+        function updateUI() {
+            isMyTurn = isConnected && myPlayerNumber === getControlPlayer();
+            document.getElementById('score1').textContent = scores[0];
+            document.getElementById('score2').textContent = scores[1];
+            document.getElementById('break1').textContent = currentPlayer === 0 ? currentBreak : 0;
+            document.getElementById('break2').textContent = currentPlayer === 1 ? currentBreak : 0;
+            const remainingBalls = balls.filter(b => b.type === 'numbered').length;
+            document.getElementById('remainingBalls').textContent = remainingBalls;
+            document.getElementById('foulCount').textContent = consecutiveFouls[currentPlayer];
+            const targetText = getTargetText();
+            let target = '', phaseText = '';
+            if (isPlacingBall && freeBallMode) { target = '自由球: ' + targetText; phaseText = '自由球'; }
+            else if (isPlacingBall && phase === 'break') { target = '放置白球'; phaseText = '开球'; }
+            else if (!gameStarted && scores[0] + scores[1] > 0) { target = '已结束'; phaseText = '结束'; }
+            else if (phase === 'break') { target = '开球'; phaseText = '开球'; }
+            else {
+                target = targetText;
+                phaseText = phase === 'open' ? '开放球局' : '进行中';
+                if (targetText === '黑八') phaseText = '黑八';
+            }
+            if (balls.filter(b => b.type === 'numbered').length === 0) { target = '结束'; phaseText = '结束'; }
+            document.getElementById('currentTarget').textContent = target;
+            document.getElementById('phase').textContent = phaseText;
+            const indicator = document.getElementById('targetIndicator');
+            if (indicator) {
+                if (target.includes('黑八')) indicator.style.background = BALL_COLORS[8];
+                else if (target.includes('花色')) indicator.style.background = 'linear-gradient(to bottom, #f7f7f2 0 25%, #d4a574 25% 75%, #f7f7f2 75% 100%)';
+                else if (target.includes('全色')) indicator.style.background = '#F4D000';
+                else if (phase === 'break' || target.includes('开放')) indicator.style.background = 'linear-gradient(90deg, #F4D000 0 45%, #f7f7f2 45% 55%, #1E5BFF 55% 100%)';
+                else indicator.style.background = '#888';
+            }
+            const p1 = document.getElementById('scorePanel1');
+            const p2 = document.getElementById('scorePanel2');
+            if (p1 && p2) {
+                p1.classList.toggle('active', currentPlayer === 0 && gameStarted);
+                p2.classList.toggle('active', currentPlayer === 1 && gameStarted);
+            }
+
+            if (isConnected) {
+                const turnEl = document.getElementById('turnIndicator');
+                const turnChip = document.getElementById('turnChip');
+                turnChip.style.display = '';
+                if (isMyTurn) {
+                    turnEl.textContent = '你的回合';
+                    turnEl.className = 'chip-val turn-on';
+                } else {
+                    turnEl.textContent = '对手的回合';
+                    turnEl.className = 'chip-val turn-off';
+                }
+            }
+
+            document.getElementById('shootBtn').disabled = !isConnected || isTableInMotion() || !gameStarted
+                || isPlacingBall || awaitingPushOutDecision || !isMyTurn;
+            const pushBackBtn = document.getElementById('pushBackBtn');
+            const pushTakeBtn = document.getElementById('pushTakeBtn');
+            if (pushBackBtn) pushBackBtn.style.display = 'none';
+            if (pushTakeBtn) pushTakeBtn.style.display = 'none';
+            document.getElementById('resetBtn').disabled = !isConnected || myPlayerNumber !== 0 || isTableInMotion();
+            updateReplayButton();
+            updatePushOutBtn();
+        }
+
+        function pushOutTakeShot() {
+            awaitingPushOutDecision = false;
+            pushOutDecisionPlayer = null;
+            pushOutAvailable = false;
+            phase = playerGroups[0] && playerGroups[1] ? 'normal' : 'open';
+            isMyTurn = myPlayerNumber === currentPlayer;
+            showMessage('中式八球没有推杆选择');
+            updateUI();
+            sendGameStateToServer('push-out-resolved');
+        }
+
+        function pushOutForceBack() {
+            awaitingPushOutDecision = false;
+            pushOutDecisionPlayer = null;
+            pushOutAvailable = false;
+            phase = playerGroups[0] && playerGroups[1] ? 'normal' : 'open';
+            isMyTurn = myPlayerNumber === currentPlayer;
+            showMessage('中式八球没有推杆选择');
+            updateUI();
+            sendGameStateToServer('push-out-resolved');
+        }
+
+        function showMessage(msg) {
+            lastMessage = msg || '';
+            document.getElementById('message').textContent = lastMessage;
+        }
+
+        function drawTable() {
+            ctx.fillStyle = '#5a3a22';
+            ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+            ctx.fillStyle = '#1b6b3a';
+            ctx.fillRect(BORDER, BORDER, TABLE_WIDTH - BORDER * 2, TABLE_HEIGHT - BORDER * 2);
+            ctx.strokeStyle = '#88cc88';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(BAULK_LINE_X, BORDER);
+            ctx.lineTo(BAULK_LINE_X, TABLE_HEIGHT - BORDER);
+            ctx.stroke();
+            if (isPlacingBall) {
+                ctx.fillStyle = 'rgba(80, 180, 255, 0.12)';
+                ctx.fillRect(BORDER, BORDER, BAULK_LINE_X - BORDER, TABLE_HEIGHT - BORDER * 2);
+            }
+            const pocketRadius = HOLE_RADIUS;
+            ctx.fillStyle = '#1a1a1a';
+            ctx.beginPath(); ctx.arc(BORDER, BORDER, pocketRadius, Math.PI * 0.5, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER, pocketRadius, Math.PI, Math.PI * 2.5); ctx.fill();
+            ctx.beginPath(); ctx.arc(BORDER, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI * 1.5); ctx.fill();
+            ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER + TABLE_INNER_WIDTH, pocketRadius, -Math.PI * 0.5, Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER, pocketRadius, Math.PI, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI); ctx.fill();
+            ctx.strokeStyle = '#5a3a22';
+            ctx.lineWidth = 4;
+        }
+
+        function drawGuideLines() {
+            if (!isMyTurn || guideMode === 'off' || isTableInMotion() || !whiteBall || !gameStarted) return;
+            const speed = Math.max(getShotSpeed(cuePower), 0.5);
+            const whiteVx = Math.cos(cueAngle) * speed, whiteVy = Math.sin(cueAngle) * speed;
+            const maxLength = guideMode === 'long' ? 1500 : 350;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 3]);
+            let closestBall = null, closestCollision = null, minDist = Infinity;
+            for (const ball of balls) {
+                if (ball.type === 'white') continue;
+                const collision = predictGuideCollision(whiteBall.x, whiteBall.y, whiteVx, whiteVy, ball.x, ball.y);
+                if (collision && collision.distance < minDist) { minDist = collision.distance; closestBall = ball; closestCollision = collision; }
+            }
+            let endX, endY;
+            if (closestCollision) { endX = closestCollision.x; endY = closestCollision.y; }
+            else { endX = whiteBall.x + whiteVx * (maxLength / speed); endY = whiteBall.y + whiteVy * (maxLength / speed); }
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath(); ctx.moveTo(whiteBall.x, whiteBall.y); ctx.lineTo(endX, endY); ctx.stroke();
+            if (closestBall && closestCollision) {
+                const { x: hitX, y: hitY, nx, ny } = closestCollision;
+                const dvn = whiteVx * nx + whiteVy * ny;
+                const whiteAfterVx = whiteVx - dvn * nx, whiteAfterVy = whiteVy - dvn * ny;
+                const ballVx = dvn * nx, ballVy = dvn * ny;
+                const previewScale = maxLength / speed * 0.5;
+                ctx.strokeStyle = 'rgba(200, 200, 255, 0.7)';
+                ctx.beginPath(); ctx.moveTo(hitX, hitY); ctx.lineTo(hitX + whiteAfterVx * previewScale, hitY + whiteAfterVy * previewScale); ctx.stroke();
+                ctx.strokeStyle = 'rgba(255, 255, 0, 0.9)';
+                ctx.beginPath(); ctx.moveTo(closestBall.x, closestBall.y); ctx.lineTo(closestBall.x + ballVx * previewScale, closestBall.y + ballVy * previewScale); ctx.stroke();
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+                ctx.beginPath(); ctx.arc(hitX, hitY, 5, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.setLineDash([]);
+        }
+
+        function predictGuideCollision(startX, startY, vx, vy, targetX, targetY) {
+            const speed = Math.hypot(vx, vy);
+            if (speed < 0.01) return null;
+            const ux = vx / speed, uy = vy / speed;
+            const relX = targetX - startX, relY = targetY - startY;
+            const projection = relX * ux + relY * uy;
+            if (projection <= 0) return null;
+            const collisionDist = BALL_RADIUS * 2;
+            const perpSq = relX * relX + relY * relY - projection * projection;
+            if (perpSq >= collisionDist * collisionDist) return null;
+            const distance = projection - Math.sqrt(collisionDist * collisionDist - perpSq);
+            if (distance < 0) return null;
+            const x = startX + ux * distance, y = startY + uy * distance;
+            const normalLen = Math.hypot(targetX - x, targetY - y);
+            if (normalLen < 0.001) return null;
+            return { distance, x, y, nx: (targetX - x) / normalLen, ny: (targetY - y) / normalLen };
+        }
+
+        function drawBalls() {
+            balls.forEach(ball => {
+                const cx = ball.x, cy = ball.y, r = BALL_RADIUS;
+                const gradient = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                if (ball === freeBallTarget) {
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#FF0'; ctx.lineWidth = 4; ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                }
+                if (ball.type === 'white') {
+                    gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.5, '#e8e8e8'); gradient.addColorStop(1, '#c0c0c0');
+                    ctx.fillStyle = gradient;
+                } else if (ball.type === 'numbered') {
+                    if (ball.number >= 9 && ball.number <= 15) {
+                        gradient.addColorStop(0, '#ffffff'); gradient.addColorStop(0.55, '#f2f2ed'); gradient.addColorStop(1, '#bdbdb7');
+                    } else if (ball.number === 8) {
+                        gradient.addColorStop(0, '#555555'); gradient.addColorStop(0.4, '#000000'); gradient.addColorStop(1, '#111111');
+                    } else {
+                        gradient.addColorStop(0, lightenColor(ball.color, 40)); gradient.addColorStop(0.5, ball.color); gradient.addColorStop(1, darkenColor(ball.color, 30));
+                    }
+                    ctx.fillStyle = gradient;
+                } else { ctx.fillStyle = ball.color; }
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+                if (ball.type === 'numbered' && ball.number >= 9 && ball.number <= 15) {
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2); ctx.clip();
+                    const stripeGradient = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+                    stripeGradient.addColorStop(0, darkenColor(ball.color, 26));
+                    stripeGradient.addColorStop(0.38, ball.color);
+                    stripeGradient.addColorStop(0.65, lightenColor(ball.color, 22));
+                    stripeGradient.addColorStop(1, darkenColor(ball.color, 26));
+                    ctx.fillStyle = stripeGradient;
+                    ctx.fillRect(cx - r, cy - r * 0.38, r * 2, r * 0.76);
+                    ctx.restore();
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+                if (ball.type === 'white') {
+                    ctx.beginPath(); ctx.arc(cx - r * 0.25, cy - r * 0.25, r * 0.35, 0, Math.PI * 2); ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+                }
+            });
+        }
+
+        function lightenColor(hex, percent) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            return 'rgb(' + Math.min(255, (num >> 16) + amt) + ',' + Math.min(255, ((num >> 8) & 0xFF) + amt) + ',' + Math.min(255, (num & 0xFF) + amt) + ')';
+        }
+
+        function darkenColor(hex, percent) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            return 'rgb(' + Math.max(0, (num >> 16) - amt) + ',' + Math.max(0, ((num >> 8) & 0xFF) - amt) + ',' + Math.max(0, (num & 0xFF) - amt) + ')';
+        }
+
+        function drawCue() {
+            if (!isMyTurn || isTableInMotion() || !gameStarted || isPlacingBall) return;
+            const cueLength = 150;
+            const startX = whiteBall.x - Math.cos(cueAngle) * (BALL_RADIUS + 10);
+            const startY = whiteBall.y - Math.sin(cueAngle) * (BALL_RADIUS + 10);
+            const endX = startX - Math.cos(cueAngle) * cueLength;
+            const endY = startY - Math.sin(cueAngle) * cueLength;
+            ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(endX, endY);
+            ctx.strokeStyle = '#bb8855'; ctx.lineWidth = 6; ctx.stroke();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        function drawPlacementHint() {
+            if (isReplaying || !isPlacingBall) return;
+            const isValid = freeBallMode
+                ? isValidAnyPosition(whiteBall.x, whiteBall.y)
+                : isValidBallPosition(whiteBall.x, whiteBall.y);
+            ctx.beginPath(); ctx.arc(whiteBall.x, whiteBall.y, BALL_RADIUS + 5, 0, Math.PI * 2);
+            ctx.strokeStyle = isValid ? 'rgba(0,255,0,0.9)' : 'rgba(255,0,0,0.9)';
+            ctx.lineWidth = 4; ctx.stroke();
+        }
+
+        function gameLoop(timestamp) {
+            if (isReplaying) updateReplayPlayback(timestamp);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawTable();
+            drawPlacementHint();
+            drawBalls();
+            drawCue();
+            drawGuideLines();
+            if (!isReplaying && isTableInMotion() && shouldSimulateTable()) updateBalls();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawDirectionTicks() {
+            const tickCanvas = document.getElementById('directionTicks');
+            if (!tickCanvas) return;
+            const tctx = tickCanvas.getContext('2d');
+            const cx = 100, cy = 100;
+            tctx.clearRect(0, 0, 200, 200);
+            for (let i = 0; i < 360; i += 15) {
+                const rad = i * Math.PI / 180;
+                const isMain = i % 45 === 0;
+                const innerR = isMain ? 78 : 84, outerR = 92;
+                tctx.beginPath();
+                tctx.moveTo(cx + Math.cos(rad) * innerR, cy + Math.sin(rad) * innerR);
+                tctx.lineTo(cx + Math.cos(rad) * outerR, cy + Math.sin(rad) * outerR);
+                tctx.strokeStyle = isMain ? '#888' : '#555';
+                tctx.lineWidth = isMain ? 1.5 : 0.8;
+                tctx.stroke();
+            }
+        }
+    </script>
+</body>
+</html>

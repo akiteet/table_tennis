@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中式八球规则说明</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #101010;
+            --panel: rgba(255, 255, 255, 0.05);
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #f2eee5;
+            --muted: #b7aa99;
+            --accent: #d4a574;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, rgba(24, 105, 63, 0.25), transparent 34%), linear-gradient(135deg, #1a1a1a, #0d0d0d);
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+            line-height: 1.65;
+        }
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 22px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(12, 12, 12, 0.92);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .nav-title { font-size: 18px; font-weight: 700; color: #e6d2ad; }
+        .nav-links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.42);
+            color: #e8d8bc;
+            text-decoration: none;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .nav-link.active,
+        .nav-link:hover { background: rgba(212, 165, 116, 0.18); border-color: rgba(212, 165, 116, 0.78); color: #fff; }
+        main {
+            width: min(1120px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 28px 0 44px;
+        }
+        .page-title {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: end;
+            padding: 22px 0 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        h1, h2, h3, p { margin-top: 0; }
+        h1 { font-size: 32px; line-height: 1.2; margin-bottom: 8px; letter-spacing: 0; }
+        h2 { font-size: 24px; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 10px; margin: 32px 0 18px; }
+        h3 { font-size: 18px; color: #e0d0b0; margin-bottom: 10px; }
+        p { margin-bottom: 14px; }
+        ul { margin: 0 0 18px; padding-left: 24px; }
+        li { margin-bottom: 8px; }
+        .lead, .source { color: var(--muted); }
+        .source { font-size: 13px; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
+        .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+        .card h4 { margin: 0 0 10px; color: var(--accent); font-size: 16px; }
+        .rule-highlight {
+            background: rgba(244, 208, 0, 0.1);
+            border-left: 4px solid #f4d000;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .ball-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 4px; }
+        .ball {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 36px;
+            padding: 6px 10px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.28);
+            box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.32);
+        }
+        .stripe { background: linear-gradient(to bottom, #f7f7f2 0 25%, var(--c) 25% 75%, #f7f7f2 75% 100%); }
+        @media (max-width: 768px) {
+            .page-title { grid-template-columns: 1fr; gap: 10px; }
+            h1 { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav" aria-label="页面导航">
+        <div class="nav-title">中式八球 - 规则说明</div>
+        <div class="nav-links">
+            <a class="nav-link" href="game_2d.html">本地游戏</a>
+            <a class="nav-link" href="game_2d_online.html">联机游戏</a>
+            <a class="nav-link active" href="game_2d_rules.html">规则说明</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="page-title">
+            <div>
+                <h1>中式八球规则说明</h1>
+                <p class="lead">本游戏实现双人中式八球练习规则：系统自动判罚，犯规后对手获得全台自由球，不需要手动报袋。</p>
+            </div>
+            <div class="source">规则参考：中式八球通用竞赛规则摘要</div>
+        </div>
+
+        <h2>一、基础目标</h2>
+        <div class="card-grid">
+            <div class="card">
+                <h4>使用球具</h4>
+                <ul>
+                    <li>1 颗白色主球</li>
+                    <li>1-7 号全色球</li>
+                    <li>8 号黑八</li>
+                    <li>9-15 号花色球</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4>分组方式</h4>
+                <ul>
+                    <li>开球后保持开放球局</li>
+                    <li>开球后第一杆合法进全色或花色时确定双方球组</li>
+                    <li>一方为全色，另一方为花色</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h4>获胜条件</h4>
+                <ul>
+                    <li>先清完本方球组</li>
+                    <li>随后合法打进黑八</li>
+                    <li>即可赢得本局</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>二、球组颜色</h2>
+        <h3>全色球：1-7 号</h3>
+        <div class="ball-row">
+            <div class="ball"><span class="dot" style="background:#F4D000"></span>1 黄</div>
+            <div class="ball"><span class="dot" style="background:#1E5BFF"></span>2 蓝</div>
+            <div class="ball"><span class="dot" style="background:#E12B2B"></span>3 红</div>
+            <div class="ball"><span class="dot" style="background:#7B3294"></span>4 紫</div>
+            <div class="ball"><span class="dot" style="background:#E87500"></span>5 橙</div>
+            <div class="ball"><span class="dot" style="background:#138A43"></span>6 绿</div>
+            <div class="ball"><span class="dot" style="background:#7A1E1E"></span>7 褐</div>
+        </div>
+        <h3>黑八与花色球</h3>
+        <div class="ball-row">
+            <div class="ball"><span class="dot" style="background:#050505"></span>8 黑八</div>
+            <div class="ball"><span class="dot stripe" style="--c:#F4D000"></span>9 黄条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#1E5BFF"></span>10 蓝条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#E12B2B"></span>11 红条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#7B3294"></span>12 紫条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#E87500"></span>13 橙条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#138A43"></span>14 绿条</div>
+            <div class="ball"><span class="dot stripe" style="--c:#7A1E1E"></span>15 褐条</div>
+        </div>
+
+        <h2>三、开球与定组</h2>
+        <ul>
+            <li>开球时白球必须放在 D 区内。</li>
+            <li>合法开球需要有目标球入袋，或至少 4 颗目标球碰库。</li>
+            <li>开球进普通目标球可以继续击球，但不直接定组。</li>
+            <li>开球进黑八时，本游戏会自动将黑八放回置球点。</li>
+        </ul>
+
+        <h2>四、合法击球</h2>
+        <ul>
+            <li>开放球局时，第一触球可以是任意全色或花色球，不能先打黑八。</li>
+            <li>定组后，必须先击中本方球组。</li>
+            <li>本方球组全部清完后，目标球改为黑八。</li>
+            <li>每杆击球后，必须有球入袋或任意球碰库，否则犯规。</li>
+            <li>合法打进本方目标球可以继续击球；未进本方目标球则交换球权。</li>
+        </ul>
+
+        <h2>五、犯规与黑八</h2>
+        <div class="rule-highlight">
+            犯规后由系统自动判罚，对手获得全台自由球，可以在台面任意合法位置放置白球。
+        </div>
+        <ul>
+            <li>空杆、白球落袋、先击中非法目标球、无球入袋且无球碰库均为犯规。</li>
+            <li>未清完本方球组前打进黑八，判对手赢得本局。</li>
+            <li>击打黑八时若同时犯规，判对手赢得本局。</li>
+            <li>清完本方球组后合法打进黑八，赢得本局。</li>
+        </ul>
+    </main>
+</body>
+</html>

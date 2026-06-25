@@ -1,6 +1,6 @@
 # Table Tennis Games
 
-HTML5 Canvas 球类游戏项目合集，目前包含斯诺克和九球。
+HTML5 Canvas 球类游戏项目合集，目前包含斯诺克、九球和中式八球。
 
 ## 在线试玩
 
@@ -10,6 +10,9 @@ HTML5 Canvas 球类游戏项目合集，目前包含斯诺克和九球。
 - [九球本地对战](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d.html)
 - [九球联机对战](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_online.html)
 - [九球规则说明](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_rules.html)
+- [中式八球本地对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d.html)
+- [中式八球联机对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_online.html)
+- [中式八球规则说明](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_rules.html)
 
 ## 目录
 
@@ -17,6 +20,7 @@ HTML5 Canvas 球类游戏项目合集，目前包含斯诺克和九球。
 table_tennis/
 ├── snooker/snooker-game/       斯诺克游戏
 ├── nine_ball/nine_ball-game/   九球游戏
+├── chinese_eight_ball/chinese_eight_ball-game/ 中式八球游戏
 ├── _data/                      规则和参考资料
 └── _start_simulation/          基础碰球模拟
 ```
