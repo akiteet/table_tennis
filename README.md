@@ -31,9 +31,11 @@ table_tennis/
 
 ## Render 部署
 
-仓库根目录提供 `render.yaml`，可在 Render Dashboard 通过 Blueprint 一次性创建两款八球联机服务：
+仓库根目录提供 `render.yaml`，可在 Render Dashboard 通过 Blueprint 统一管理四个联机服务。建议 Blueprint Name 填 `table-tennis-games`。
 
+- `snooker-ovzx`：斯诺克联机服务，默认地址 `wss://snooker-ovzx.onrender.com`
+- `nine-ball`：九球联机服务，默认地址 `wss://nine-ball.onrender.com`
 - `chinese-eight-ball`：中式八球联机服务，默认地址 `wss://chinese-eight-ball.onrender.com`
 - `american-eight-ball`：美式八球联机服务，默认地址 `wss://american-eight-ball.onrender.com`
 
-两个服务都使用对应子目录的 `npm ci` 构建和 `npm start` 启动。
+四个服务都使用对应子目录的 `npm ci` 构建和 `npm start` 启动。

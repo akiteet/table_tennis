@@ -1,5 +1,29 @@
 services:
   - type: web
+    name: snooker-ovzx
+    runtime: node
+    plan: free
+    rootDir: snooker/snooker-game
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /game_2d_online.html
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: nine-ball
+    runtime: node
+    plan: free
+    rootDir: nine_ball/nine_ball-game
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /game_2d_online.html
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
     name: chinese-eight-ball
     runtime: node
     plan: free
