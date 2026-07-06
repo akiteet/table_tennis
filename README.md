@@ -1,6 +1,6 @@
 # Table Tennis Games
 
-HTML5 Canvas 球类游戏项目合集，目前包含斯诺克、九球和中式八球。
+HTML5 Canvas 球类游戏项目合集，目前包含斯诺克、九球、中式八球和美式八球。
 
 ## 在线试玩
 
@@ -13,6 +13,9 @@ HTML5 Canvas 球类游戏项目合集，目前包含斯诺克、九球和中式�
 - [中式八球本地对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d.html)
 - [中式八球联机对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_online.html)
 - [中式八球规则说明](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_rules.html)
+- [美式八球本地对战](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d.html)
+- [美式八球联机对战](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_online.html)
+- [美式八球规则说明](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_rules.html)
 
 ## 目录
 
@@ -21,6 +24,7 @@ table_tennis/
 ├── snooker/snooker-game/       斯诺克游戏
 ├── nine_ball/nine_ball-game/   九球游戏
 ├── chinese_eight_ball/chinese_eight_ball-game/ 中式八球游戏
+├── american_eight_ball/american_eight_ball-game/ 美式八球游戏
 ├── _data/                      规则和参考资料
 └── _start_simulation/          基础碰球模拟
 ```
