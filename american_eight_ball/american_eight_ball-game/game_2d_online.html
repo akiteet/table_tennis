@@ -143,6 +143,7 @@
 
         .col-right { display: flex; flex-direction: column; min-height: 0; }
         .table-stage {
+            position: relative;
             flex: 1; display: flex;
             align-items: center; justify-content: center;
             overflow: hidden; padding: 4px;
@@ -151,13 +152,13 @@
             flex: 0 0 auto;
             max-width: 100%; max-height: 100%;
             object-fit: contain;
-            border: 3px solid #5a3a22; background: #111; cursor: crosshair;
+            border: 3px solid #6b4528; background: #111; cursor: crosshair;
         }
 
         .console-bar {
             flex: 0 0 auto;
             display: grid;
-            grid-template-columns: auto auto minmax(0, 1fr) auto;
+            grid-template-columns: auto auto auto minmax(0, 1fr) auto;
             align-items: center;
             gap: 12px;
             padding: 20px 18px;
@@ -330,12 +331,13 @@
         .spin-btn:hover { color: #fff; border-color: #888; }
 
         .message {
-            position: fixed; left: 50%; bottom: 110px;
+            position: fixed; left: 50%; top: 58px;
             transform: translateX(-50%);
             font-size: 16px; color: #ff0;
             background: rgba(0,0,0,0.75);
             padding: 6px 16px; border-radius: 6px;
-            white-space: nowrap; z-index: 100;
+            max-width: calc(100vw - 32px);
+            white-space: normal; text-align: center; z-index: 100;
         }
         .guide-section { display: flex; align-items: center; gap: 4px; }
         .guide-section .section-label { font-size: 11px; color: #888; margin-right: 2px; }
@@ -345,18 +347,33 @@
         }
         .guide-btn:hover { color: #fff; border-color: #888; }
         .guide-btn.active { color: #d4a574; border-color: #8a5a33; background: rgba(180,120,60,0.15); }
-        .call-shot-control { display: flex; align-items: center; gap: 6px; }
-        .call-shot-control select {
+        .call-shot-control { display: flex; align-items: center; gap: 8px; min-width: 170px; }
+        .call-shot-label { font-size: 11px; color: #888; }
+        .call-shot-value {
+            min-width: 92px;
             min-height: 30px;
-            max-width: 104px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
             border: 1px solid rgba(212,165,116,0.42);
             border-radius: 5px;
-            background: #1f1f1f;
+            background: rgba(255,255,255,0.04);
             color: #f0e0c8;
             font-size: 12px;
-            padding: 0 6px;
         }
-        .call-shot-control select:disabled { opacity: 0.45; }
+        .call-shot-clear {
+            min-height: 30px;
+            padding: 0 8px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background: transparent;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .call-shot-clear:hover { color: #fff; border-color: #888; }
+        .call-shot-clear:disabled { opacity: 0.45; cursor: default; }
 
         .hidden { display: none !important; }
         @media (max-width: 900px) {
@@ -467,8 +484,9 @@
 
                     <div class="console-group sep">
                         <div class="call-shot-control">
-                            <select id="calledBall" aria-label="报打目标球" onchange="setCalledBall(this.value)"></select>
-                            <select id="calledPocket" aria-label="报打袋口" onchange="setCalledPocket(this.value)"></select>
+                            <span class="call-shot-label">报袋</span>
+                            <span class="call-shot-value" id="calledShotText">开球无需报袋</span>
+                            <button class="call-shot-clear" id="clearCallBtn" type="button" onclick="clearCalledShot()">清除</button>
                         </div>
                     </div>
 
@@ -1249,7 +1267,11 @@
         function getCalledShotText(context) {
             const ctx = context || { phase, calledBallNumber, calledPocketId };
             if (!isCallShotRequired(ctx)) return '开球无需报袋';
-            if (!hasCompleteCalledShot(ctx)) return '请选择目标球和袋口';
+            if (!hasCompleteCalledShot(ctx)) {
+                if (ctx.calledBallNumber) return ctx.calledBallNumber + '号 -> 选袋口';
+                if (ctx.calledPocketId) return '选目标球 -> ' + getPocketName(ctx.calledPocketId);
+                return '未选择';
+            }
             return ctx.calledBallNumber + '号进' + getPocketName(ctx.calledPocketId);
         }
 
@@ -1271,11 +1293,17 @@
             updateUI();
         }
 
-        function updateCallShotControls() {
-            const ballSelect = document.getElementById('calledBall');
-            const pocketSelect = document.getElementById('calledPocket');
-            if (!ballSelect || !pocketSelect) return;
+        function clearCalledShot() {
+            calledBallNumber = null;
+            calledPocketId = null;
+            updateUI();
+            if (isConnected && isMyTurn) sendGameStateToServer('called-shot');
+        }
 
+        function updateCallShotControls() {
+            const text = document.getElementById('calledShotText');
+            const clearButton = document.getElementById('clearCallBtn');
+            if (!text || !clearButton) return;
             const legalNumbers = getLegalTargetNumbers(currentPlayer).slice().sort((a, b) => a - b);
             const callRequired = isCallShotRequired();
             if (!callRequired) {
@@ -1285,20 +1313,56 @@
                 calledBallNumber = null;
             }
 
-            const currentBallValue = calledBallNumber ? String(calledBallNumber) : '';
-            ballSelect.innerHTML = '<option value="">目标球</option>' + legalNumbers
-                .map(number => '<option value="' + number + '">' + number + '号</option>')
-                .join('');
-            ballSelect.value = currentBallValue;
-            ballSelect.disabled = !isConnected || !isMyTurn || !gameStarted || !callRequired || isTableInMotion() || isPlacingBall;
+            if (calledPocketId && !POCKET_NAMES[calledPocketId]) calledPocketId = null;
+            text.textContent = getCalledShotText();
+            clearButton.disabled = !isConnected || !isMyTurn || !callRequired || (!calledBallNumber && !calledPocketId) || isTableInMotion();
+        }
 
-            const currentPocketValue = calledPocketId || '';
-            pocketSelect.innerHTML = '<option value="">袋口</option>' + Object.entries(POCKET_NAMES)
-                .map(([id, name]) => '<option value="' + id + '">' + name + '</option>')
-                .join('');
-            pocketSelect.value = POCKET_NAMES[currentPocketValue] ? currentPocketValue : '';
-            if (!POCKET_NAMES[currentPocketValue]) calledPocketId = null;
-            pocketSelect.disabled = !isConnected || !isMyTurn || !gameStarted || !callRequired || isTableInMotion() || isPlacingBall;
+        function findBallAt(x, y) {
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                if (ball.type !== 'numbered') continue;
+                if (Math.hypot(ball.x - x, ball.y - y) <= BALL_RADIUS * 1.7) return ball;
+            }
+            return null;
+        }
+
+        function findPocketAt(x, y) {
+            return holes.find(hole => Math.hypot(hole.x - x, hole.y - y) <= HOLE_RADIUS + BALL_RADIUS * 1.6) || null;
+        }
+
+        function showCalledShotSelectionMessage() {
+            if (!calledBallNumber) showMessage('已选择' + getPocketName(calledPocketId) + '，请在球台点击目标球');
+            else if (!calledPocketId) showMessage('已选择' + calledBallNumber + '号，请在球台点击目标袋');
+            else showMessage('已报 ' + getCalledShotText());
+        }
+
+        function handleCallShotCanvasSelection(x, y) {
+            if (!isCallShotRequired() || isTableInMotion() || !gameStarted || isPlacingBall) return false;
+
+            const clickedBall = findBallAt(x, y);
+            if (clickedBall) {
+                if (!getLegalTargetNumbers(currentPlayer).includes(clickedBall.number)) {
+                    showMessage('当前目标是' + getTargetText() + '，不能报' + clickedBall.number + '号');
+                    return true;
+                }
+                calledBallNumber = clickedBall.number;
+                updateUI();
+                showCalledShotSelectionMessage();
+                sendGameStateToServer('called-shot');
+                return true;
+            }
+
+            const clickedPocket = findPocketAt(x, y);
+            if (clickedPocket) {
+                calledPocketId = clickedPocket.id;
+                updateUI();
+                showCalledShotSelectionMessage();
+                sendGameStateToServer('called-shot');
+                return true;
+            }
+
+            return false;
         }
 
         function resetShotTracking() {
@@ -1523,6 +1587,7 @@
             }
 
             if (isTableInMotion() || !gameStarted) return;
+            if (handleCallShotCanvasSelection(mx, my)) return;
 
             cueAngle = Math.atan2(my - whiteBall.y, mx - whiteBall.x);
             updateDirectionHandle();
@@ -1537,7 +1602,7 @@
             if (isTableInMotion() || !gameStarted) return;
             if (isPlacingBall) { showMessage('请先放置白球'); return; }
             if (!hasCompleteCalledShot()) {
-                showMessage('请先选择目标球和袋口');
+                showMessage('请先在球台点击目标球和目标袋');
                 return;
             }
             doShoot(false);
@@ -2191,11 +2256,11 @@
         }
 
         function drawTable() {
-            ctx.fillStyle = '#5a3a22';
+            ctx.fillStyle = '#6b4528';
             ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
-            ctx.fillStyle = '#1b6b3a';
+            ctx.fillStyle = '#167c93';
             ctx.fillRect(BORDER, BORDER, TABLE_WIDTH - BORDER * 2, TABLE_HEIGHT - BORDER * 2);
-            ctx.strokeStyle = '#88cc88';
+            ctx.strokeStyle = 'rgba(230, 250, 255, 0.45)';
             ctx.lineWidth = 2;
             ctx.setLineDash([]);
             ctx.beginPath();
@@ -2203,7 +2268,7 @@
             ctx.lineTo(BAULK_LINE_X, TABLE_HEIGHT - BORDER);
             ctx.stroke();
             if (isPlacingBall) {
-                ctx.fillStyle = 'rgba(80, 180, 255, 0.12)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.13)';
                 ctx.fillRect(BORDER, BORDER, BAULK_LINE_X - BORDER, TABLE_HEIGHT - BORDER * 2);
             }
             const pocketRadius = HOLE_RADIUS;
@@ -2214,7 +2279,7 @@
             ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER + TABLE_INNER_WIDTH, pocketRadius, -Math.PI * 0.5, Math.PI); ctx.fill();
             ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER, pocketRadius, Math.PI, Math.PI * 2); ctx.fill();
             ctx.beginPath(); ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI); ctx.fill();
-            ctx.strokeStyle = '#5a3a22';
+            ctx.strokeStyle = '#6b4528';
             ctx.lineWidth = 4;
         }
 
@@ -2316,6 +2381,51 @@
             });
         }
 
+        function drawCallShotOverlay() {
+            if (isReplaying || !gameStarted || isPlacingBall || isTableInMotion() || !isCallShotRequired()) return;
+
+            const legalNumbers = getLegalTargetNumbers(currentPlayer);
+            const selectedBall = balls.find(ball => ball.type === 'numbered' && ball.number === calledBallNumber);
+
+            ctx.save();
+            balls.forEach(ball => {
+                if (ball.type !== 'numbered' || !legalNumbers.includes(ball.number)) return;
+                const selected = ball.number === calledBallNumber;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, BALL_RADIUS + (selected ? 6 : 4), 0, Math.PI * 2);
+                ctx.strokeStyle = selected ? '#ffd45a' : 'rgba(255,255,255,0.48)';
+                ctx.lineWidth = selected ? 4 : 2;
+                if (!selected) ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+
+            holes.forEach(hole => {
+                const selected = hole.id === calledPocketId;
+                ctx.beginPath();
+                ctx.arc(hole.x, hole.y, HOLE_RADIUS * 0.68, 0, Math.PI * 2);
+                ctx.fillStyle = selected ? 'rgba(255,212,90,0.28)' : 'rgba(255,255,255,0.08)';
+                ctx.fill();
+                ctx.strokeStyle = selected ? '#ffd45a' : 'rgba(255,255,255,0.42)';
+                ctx.lineWidth = selected ? 4 : 2;
+                ctx.stroke();
+            });
+
+            const selectedPocket = holes.find(hole => hole.id === calledPocketId);
+            if (selectedBall && selectedPocket) {
+                ctx.beginPath();
+                ctx.moveTo(selectedBall.x, selectedBall.y);
+                ctx.lineTo(selectedPocket.x, selectedPocket.y);
+                ctx.strokeStyle = 'rgba(255,212,90,0.85)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 6]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            ctx.restore();
+        }
+
         function lightenColor(hex, percent) {
             const num = parseInt(hex.replace('#', ''), 16);
             const amt = Math.round(2.55 * percent);
@@ -2358,6 +2468,7 @@
             drawBalls();
             drawCue();
             drawGuideLines();
+            drawCallShotOverlay();
             if (!isReplaying && isTableInMotion() && shouldSimulateTable()) updateBalls();
             requestAnimationFrame(gameLoop);
         }
