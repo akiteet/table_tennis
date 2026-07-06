@@ -2376,26 +2376,26 @@
             const selectedBall = balls.find(ball => ball.type === 'numbered' && ball.number === calledBallNumber);
 
             ctx.save();
+            const selectedColor = 'rgba(238, 212, 160, 0.72)';
+            const idleColor = 'rgba(255, 255, 255, 0.16)';
             balls.forEach(ball => {
                 if (ball.type !== 'numbered' || !legalNumbers.includes(ball.number)) return;
                 const selected = ball.number === calledBallNumber;
                 ctx.beginPath();
-                ctx.arc(ball.x, ball.y, BALL_RADIUS + (selected ? 6 : 4), 0, Math.PI * 2);
-                ctx.strokeStyle = selected ? '#ffd45a' : 'rgba(255,255,255,0.48)';
-                ctx.lineWidth = selected ? 4 : 2;
-                if (!selected) ctx.setLineDash([4, 4]);
+                ctx.arc(ball.x, ball.y, BALL_RADIUS + (selected ? 3 : 2), 0, Math.PI * 2);
+                ctx.strokeStyle = selected ? selectedColor : idleColor;
+                ctx.lineWidth = selected ? 2 : 1;
                 ctx.stroke();
-                ctx.setLineDash([]);
             });
 
             holes.forEach(hole => {
                 const selected = hole.id === calledPocketId;
                 ctx.beginPath();
-                ctx.arc(hole.x, hole.y, HOLE_RADIUS * 0.68, 0, Math.PI * 2);
-                ctx.fillStyle = selected ? 'rgba(255,212,90,0.28)' : 'rgba(255,255,255,0.08)';
+                ctx.arc(hole.x, hole.y, selected ? HOLE_RADIUS * 0.52 : HOLE_RADIUS * 0.38, 0, Math.PI * 2);
+                ctx.fillStyle = selected ? 'rgba(238, 212, 160, 0.10)' : 'rgba(255, 255, 255, 0.025)';
                 ctx.fill();
-                ctx.strokeStyle = selected ? '#ffd45a' : 'rgba(255,255,255,0.42)';
-                ctx.lineWidth = selected ? 4 : 2;
+                ctx.strokeStyle = selected ? selectedColor : 'rgba(255, 255, 255, 0.14)';
+                ctx.lineWidth = selected ? 2 : 1;
                 ctx.stroke();
             });
 
@@ -2404,9 +2404,9 @@
                 ctx.beginPath();
                 ctx.moveTo(selectedBall.x, selectedBall.y);
                 ctx.lineTo(selectedPocket.x, selectedPocket.y);
-                ctx.strokeStyle = 'rgba(255,212,90,0.85)';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([8, 6]);
+                ctx.strokeStyle = 'rgba(238, 212, 160, 0.38)';
+                ctx.lineWidth = 1.25;
+                ctx.setLineDash([5, 8]);
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
