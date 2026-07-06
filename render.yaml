@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: chinese-eight-ball
+    runtime: node
+    plan: free
+    rootDir: chinese_eight_ball/chinese_eight_ball-game
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /game_2d_online.html
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: american-eight-ball
+    runtime: node
+    plan: free
+    rootDir: american_eight_ball/american_eight_ball-game
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /game_2d_online.html
+    envVars:
+      - key: NODE_ENV
+        value: production
