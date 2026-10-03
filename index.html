@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台球游戏合集</title>
+    <style>
+        :root {
+            --bg: #0d0f0e;
+            --panel: rgba(18, 25, 22, 0.92);
+            --panel-soft: rgba(255, 255, 255, 0.05);
+            --felt: #0f6b43;
+            --felt-dark: #0b3f2c;
+            --gold: #d4a574;
+            --gold-soft: rgba(212, 165, 116, 0.28);
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #f5efe3;
+            --muted: #b9c2b8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+            background:
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(135deg, #151515, var(--bg) 62%);
+            background-size: 26px 26px, auto;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(12, 12, 12, 0.92);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e6d2ad;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 6px;
+            border: 1px solid rgba(212, 165, 116, 0.42);
+            color: #e8d8bc;
+            text-decoration: none;
+            font-size: 13px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(212, 165, 116, 0.18);
+            border-color: rgba(212, 165, 116, 0.78);
+            color: #fff;
+        }
+
+        .page-shell {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 34px 0 42px;
+        }
+
+        .intro {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+            align-items: center;
+            gap: 28px;
+            margin-bottom: 28px;
+        }
+
+        .intro h1 {
+            margin: 0;
+            font-size: clamp(34px, 6vw, 58px);
+            line-height: 1.06;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .intro p {
+            max-width: 620px;
+            margin: 16px 0 0;
+            color: var(--muted);
+            font-size: 17px;
+            line-height: 1.7;
+        }
+
+        .table-preview {
+            position: relative;
+            min-height: 230px;
+            border: 6px solid #5a3a22;
+            border-radius: 8px;
+            background:
+                linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.04)),
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12), transparent 36%),
+                linear-gradient(135deg, var(--felt), var(--felt-dark));
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), inset 0 0 34px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+        }
+
+        .table-preview::before,
+        .table-preview::after {
+            content: "";
+            position: absolute;
+            inset: 14px;
+            border: 1px solid rgba(245, 239, 227, 0.32);
+            border-radius: 4px;
+        }
+
+        .table-preview::after {
+            inset: auto;
+            width: 92px;
+            height: 92px;
+            left: 10%;
+            top: 50%;
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+
+        .ball {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            box-shadow: inset -5px -5px 8px rgba(0, 0, 0, 0.26), inset 4px 4px 7px rgba(255, 255, 255, 0.42);
+        }
+
+        .ball.cue {
+            left: 18%;
+            top: 46%;
+            background: #f7f1dc;
+        }
+
+        .ball.red {
+            right: 26%;
+            top: 34%;
+            background: #b83232;
+        }
+
+        .ball.blue {
+            right: 18%;
+            top: 50%;
+            background: #2465c7;
+        }
+
+        .ball.black {
+            right: 31%;
+            top: 58%;
+            background: #111;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .game-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 254px;
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--panel);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+        }
+
+        .game-card h2 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.25;
+            color: #fff4df;
+        }
+
+        .game-card p {
+            margin: 10px 0 18px;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 14px;
+        }
+
+        .game-mark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            margin-bottom: 14px;
+            border-radius: 50%;
+            background: var(--mark, #7b2631);
+            color: #fff;
+            font-weight: 800;
+            box-shadow: inset -6px -6px 10px rgba(0, 0, 0, 0.22), inset 5px 5px 9px rgba(255, 255, 255, 0.22);
+        }
+
+        .card-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .primary-link,
+        .secondary-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .primary-link {
+            background: linear-gradient(180deg, #6b4423, #4a2f15);
+            border: 1px solid rgba(212, 165, 116, 0.78);
+            color: #fff;
+        }
+
+        .secondary-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .secondary-link {
+            border: 1px solid var(--gold-soft);
+            background: var(--panel-soft);
+            color: #e8d8bc;
+        }
+
+        .primary-link:hover,
+        .secondary-link:hover {
+            transform: translateY(-1px);
+            border-color: rgba(212, 165, 116, 0.86);
+            background-color: rgba(212, 165, 116, 0.14);
+        }
+
+        @media (max-width: 980px) {
+            .intro {
+                grid-template-columns: 1fr;
+            }
+
+            .game-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 620px) {
+            .top-nav {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .nav-links {
+                justify-content: flex-start;
+            }
+
+            .page-shell {
+                width: min(100% - 24px, 1180px);
+                padding-top: 24px;
+            }
+
+            .table-preview {
+                min-height: 180px;
+            }
+
+            .game-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="top-nav">
+        <div class="nav-title">台球游戏合集</div>
+        <nav class="nav-links" aria-label="游戏入口">
+            <a class="nav-link active" href="index.html">首页</a>
+            <a class="nav-link" href="snooker/snooker-game/game_2d.html">斯诺克</a>
+            <a class="nav-link" href="nine_ball/nine_ball-game/game_2d.html">九球</a>
+            <a class="nav-link" href="chinese_eight_ball/chinese_eight_ball-game/game_2d.html">中式八球</a>
+            <a class="nav-link" href="american_eight_ball/american_eight_ball-game/game_2d.html">美式八球</a>
+        </nav>
+    </header>
+
+    <main class="page-shell">
+        <section class="intro" aria-labelledby="page-title">
+            <div>
+                <h1 id="page-title">台球游戏合集</h1>
+                <p>集中进入斯诺克、九球、中式八球和美式八球。每个项目都保留本地对战、联机对战与规则说明。</p>
+            </div>
+            <div class="table-preview" aria-hidden="true">
+                <span class="ball cue"></span>
+                <span class="ball red"></span>
+                <span class="ball blue"></span>
+                <span class="ball black"></span>
+            </div>
+        </section>
+
+        <section class="game-grid" aria-label="四个游戏入口">
+            <article class="game-card">
+                <div class="game-mark" style="--mark: #7b2631;">S</div>
+                <h2>斯诺克</h2>
+                <p>经典长台布局，适合练习红彩衔接和安全球思路。</p>
+                <div class="card-actions">
+                    <a class="primary-link" href="snooker/snooker-game/game_3d.html">本地 3D</a>
+                    <div class="secondary-row">
+                        <a class="secondary-link" href="snooker/snooker-game/game_2d.html">本地 2D</a>
+                        <a class="secondary-link" href="snooker/snooker-game/game_2d_online.html">联机 2D</a>
+                        <a class="secondary-link" href="snooker/snooker-game/game_3d_online.html">联机 3D</a>
+                        <a class="secondary-link" href="snooker/snooker-game/game_2d_rules.html">规则说明</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="game-card">
+                <div class="game-mark" style="--mark: #d6a229;">9</div>
+                <h2>九球</h2>
+                <p>快节奏轮序进攻，围绕最小号码球寻找连续清台机会。</p>
+                <div class="card-actions">
+                    <a class="primary-link" href="nine_ball/nine_ball-game/game_3d.html">本地 3D</a>
+                    <div class="secondary-row">
+                        <a class="secondary-link" href="nine_ball/nine_ball-game/game_2d.html">本地 2D</a>
+                        <a class="secondary-link" href="nine_ball/nine_ball-game/game_2d_online.html">联机 2D</a>
+                        <a class="secondary-link" href="nine_ball/nine_ball-game/game_3d_online.html">联机 3D</a>
+                        <a class="secondary-link" href="nine_ball/nine_ball-game/game_2d_rules.html">规则说明</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="game-card">
+                <div class="game-mark" style="--mark: #b83232;">8</div>
+                <h2>中式八球</h2>
+                <p>中式球台与八球规则结合，攻防转换更强调走位控制。</p>
+                <div class="card-actions">
+                    <a class="primary-link" href="chinese_eight_ball/chinese_eight_ball-game/game_3d.html">本地 3D</a>
+                    <div class="secondary-row">
+                        <a class="secondary-link" href="chinese_eight_ball/chinese_eight_ball-game/game_2d.html">本地 2D</a>
+                        <a class="secondary-link" href="chinese_eight_ball/chinese_eight_ball-game/game_2d_online.html">联机 2D</a>
+                        <a class="secondary-link" href="chinese_eight_ball/chinese_eight_ball-game/game_3d_online.html">联机 3D</a>
+                        <a class="secondary-link" href="chinese_eight_ball/chinese_eight_ball-game/game_2d_rules.html">规则说明</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="game-card">
+                <div class="game-mark" style="--mark: #1b1b1b;">8</div>
+                <h2>美式八球</h2>
+                <p>美式球台手感更轻快，适合快速体验花色分组与黑八终局。</p>
+                <div class="card-actions">
+                    <a class="primary-link" href="american_eight_ball/american_eight_ball-game/game_3d.html">本地 3D</a>
+                    <div class="secondary-row">
+                        <a class="secondary-link" href="american_eight_ball/american_eight_ball-game/game_2d.html">本地 2D</a>
+                        <a class="secondary-link" href="american_eight_ball/american_eight_ball-game/game_2d_online.html">联机 2D</a>
+                        <a class="secondary-link" href="american_eight_ball/american_eight_ball-game/game_3d_online.html">联机 3D</a>
+                        <a class="secondary-link" href="american_eight_ball/american_eight_ball-game/game_2d_rules.html">规则说明</a>
+                    </div>
+                </div>
+            </article>
+
+        </section>
+    </main>
+</body>
+</html>

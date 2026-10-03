@@ -1,3 +1,7 @@
 **/node_modules/
 **/.env
 
+
+# 3D 构建临时产物
+_build/_crop/
+_build/check.mjs

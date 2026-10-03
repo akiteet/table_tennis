@@ -5,6 +5,9 @@ const { WebSocketServer } = require('ws');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
+// 3D 页的 importmap 写的是 ../../_vendor/three@…（静态托管时指向仓库根目录的 _vendor），
+// 经本服务器访问时浏览器会把它解析成 /_vendor/…，这里映射回仓库根目录的 _vendor
+const VENDOR_ROOT = path.join(__dirname, '..', '..', '_vendor');
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -17,9 +20,11 @@ const server = http.createServer((req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   let pathname = decodeURIComponent(requestUrl.pathname);
   if (pathname === '/') pathname = '/game_2d_online.html';
-  const filePath = path.normalize(path.join(ROOT, pathname));
+  const isVendor = pathname.startsWith('/_vendor/');
+  const base = isVendor ? VENDOR_ROOT : ROOT;
+  const filePath = path.normalize(path.join(base, isVendor ? pathname.slice('/_vendor'.length) : pathname));
 
-  if (!filePath.startsWith(ROOT)) {
+  if (!filePath.startsWith(base + path.sep)) {
     res.writeHead(403);
     res.end('Forbidden');
     return;
