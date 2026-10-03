@@ -335,8 +335,10 @@
     <nav class="top-nav" aria-label="页面导航">
         <div class="nav-title">九球台球 - 双人对战</div>
         <div class="nav-links">
-            <a class="nav-link active" href="game_2d.html">本地游戏</a>
-            <a class="nav-link" href="game_2d_online.html">联机游戏</a>
+            <a class="nav-link active" href="game_2d.html">本地 2D</a>
+            <a class="nav-link" href="game_3d.html">本地 3D</a>
+            <a class="nav-link" href="game_2d_online.html">联机 2D</a>
+            <a class="nav-link" href="game_3d_online.html">联机 3D</a>
             <a class="nav-link" href="game_2d_rules.html">规则说明</a>
         </div>
     </nav>
@@ -458,8 +460,11 @@
         let canvas, ctx;
         let SCALE, TABLE_INNER_LENGTH, TABLE_INNER_WIDTH, BORDER, TABLE_WIDTH, TABLE_HEIGHT;
         let BALL_RADIUS, FRICTION, HOLE_RADIUS, BALL_DIAMETER, D_ZONE_RADIUS;
+        let CUSHION_WIDTH, RAIL_WIDTH, RAIL_3D_WIDTH;
         let BAULK_LINE_X, D_ZONE_CENTER_X, D_ZONE_CENTER_Y;
         let holes;
+        let cushionPieces = [];
+        let cushionSegments = [];
 
         let balls = [];
         let whiteBall = null;
@@ -515,6 +520,7 @@
         const BASE_SHOT_SPEED = 12;
         const HIGH_POWER_BOOST = 4;
         const CUSHION_RESTITUTION = 0.82;
+        const POCKET_JAW_RADIUS = 9;            // 中袋库边鼻端圆角（袋嘴）半径；须小于库边宽，否则圆弧终点与端面点重合成零长碰撞边
         const TOP_SPIN_STRENGTH = 0.42;
         const SIDE_SPIN_CUSHION_STRENGTH = 0.24;
         const SIDE_SPIN_DECAY = 0.992;
@@ -687,13 +693,20 @@
             SCALE = 0.2;
             TABLE_INNER_LENGTH = Math.round(2540 * SCALE);
             TABLE_INNER_WIDTH = Math.round(1270 * SCALE);
-            BORDER = Math.round(30 * SCALE);
-            TABLE_WIDTH = TABLE_INNER_LENGTH + BORDER * 2;
-            TABLE_HEIGHT = TABLE_INNER_WIDTH + BORDER * 2;
 
             BALL_RADIUS = Math.round(52.5 * SCALE / 2);
             FRICTION = 0.985;
+            // 袋口与边框尺寸取自九球标准台示意图（_data/standard/nine.jpg）实测：
+            // 洞半径 ≈ 库边宽 ≈ 55mm，外沿每边（库边 + 木框）180mm
             HOLE_RADIUS = Math.max(BALL_RADIUS + 4, Math.round(52.5 * SCALE));
+            // 库边宽 = 洞半径：中袋洞心恰好落在库边外沿上、洞圆与绿呢边相切；
+            // 角袋洞心在绿呢四角，洞圆恰好与长短两条库边的外沿同时相切
+            CUSHION_WIDTH = HOLE_RADIUS;
+            RAIL_WIDTH = HOLE_RADIUS + Math.round(10 * SCALE);   // 2D 木框只作示意：刚好包住伸进木框的中袋洞（洞心在库边外沿上）再留 2
+            RAIL_3D_WIDTH = Math.round(180 * SCALE) - CUSHION_WIDTH;   // 示意图实测的真实木框宽，仅 3D 实体木框使用
+            BORDER = CUSHION_WIDTH + RAIL_WIDTH;         // 画布边 → 库边鼻子线（物理边界）
+            TABLE_WIDTH = TABLE_INNER_LENGTH + BORDER * 2;
+            TABLE_HEIGHT = TABLE_INNER_WIDTH + BORDER * 2;
 
             BALL_DIAMETER = BALL_RADIUS * 2;
             D_ZONE_RADIUS = Math.round(292 * SCALE);
@@ -702,15 +715,72 @@
             D_ZONE_CENTER_X = BAULK_LINE_X;
             D_ZONE_CENTER_Y = TABLE_HEIGHT / 2;
 
-            const offset = HOLE_RADIUS * 0.3;
+            const L = BORDER, R = TABLE_WIDTH - BORDER;   // 左右库边鼻子线
+            const T = BORDER, B = TABLE_HEIGHT - BORDER;  // 上下库边鼻子线
+            const midX = BORDER + TABLE_INNER_LENGTH / 2;
             holes = [
-                { x: BORDER - offset, y: BORDER - offset },
-                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER - offset * 1.2 },
-                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER - offset },
-                { x: BORDER - offset, y: BORDER + TABLE_INNER_WIDTH + offset },
-                { x: BORDER + TABLE_INNER_LENGTH / 2, y: BORDER + TABLE_INNER_WIDTH + offset * 1.2 },
-                { x: BORDER + TABLE_INNER_LENGTH + offset, y: BORDER + TABLE_INNER_WIDTH + offset }
+                { x: L, y: T },                          // 左上角袋：洞心在绿呢角上
+                { x: midX, y: T - CUSHION_WIDTH },       // 上中袋：洞心在库边外沿上
+                { x: R, y: T },                          // 右上角袋
+                { x: L, y: B },                          // 左下角袋
+                { x: midX, y: B + CUSHION_WIDTH },       // 下中袋
+                { x: R, y: B }                           // 右下角袋
             ];
+            buildCushionGeometry();
+        }
+
+        // 库边平面形状（逻辑坐标）：2D 绘制、物理碰撞、3D 建模共用这一份，三者不会对不上。
+        // 长库边每条两段（角袋 → 中袋），短库边每条一段：
+        //   角袋端 —— 45° 直线斜切（标准台示意图 nine.jpg），斜切面与角袋洞圆相切；
+        //             同一角袋的两条斜切面互相平行，夹出一条宽 2r、直通洞口的袋道；
+        //   中袋端 —— 鼻子线 → 圆角袋嘴 → 垂直端面，端面与中袋洞圆相切于库边外沿
+        function buildCushionGeometry() {
+            const c = CUSHION_WIDTH, r = HOLE_RADIUS, jaw = POCKET_JAW_RADIUS;
+            const k = r * Math.SQRT2;                  // 斜切面在鼻子线上距台角的距离（45° 线与洞圆相切）
+            const L = BORDER, R = TABLE_WIDTH - BORDER;
+            const T = BORDER, B = TABLE_HEIGHT - BORDER;
+            const midX = BORDER + TABLE_INNER_LENGTH / 2;
+            const arc = (cx, cy, rad, a0, a1, n) => {
+                const pts = [];
+                for (let i = 0; i <= n; i++) {
+                    const a = a0 + (a1 - a0) * i / n;
+                    pts.push({ x: cx + rad * Math.cos(a), y: cy + rad * Math.sin(a) });
+                }
+                return pts;
+            };
+
+            cushionPieces = [];
+            // out：从鼻子线指向木框的方向（上 / 左为 -1，下 / 右为 +1）
+            for (const [noseY, out] of [[T, -1], [B, 1]]) {
+                for (const [cornerX, dir] of [[L, 1], [R, -1]]) {          // dir：从角袋指向中袋
+                    const jawX = midX - dir * r;                            // 中袋端面所在 x
+                    const pts = [
+                        { x: cornerX + dir * (k - c), y: noseY + out * c },     // 斜切面外端（库边外沿上）
+                        { x: cornerX + dir * k, y: noseY },                     // 斜切面鼻端
+                        ...arc(jawX - dir * jaw, noseY + out * jaw, jaw,
+                            -out * Math.PI / 2, dir > 0 ? 0 : -out * Math.PI, 12),
+                        { x: jawX, y: noseY + out * c }
+                    ];
+                    cushionPieces.push({ pts, axis: 'y', nose: noseY, out });
+                }
+            }
+            for (const [noseX, out] of [[L, -1], [R, 1]]) {
+                const pts = [
+                    { x: noseX + out * c, y: T + (k - c) },
+                    { x: noseX, y: T + k },
+                    { x: noseX, y: B - k },
+                    { x: noseX + out * c, y: B - (k - c) }
+                ];
+                cushionPieces.push({ pts, axis: 'x', nose: noseX, out });
+            }
+
+            // 碰撞线段 = 每块库边除背面（贴木框那条闭合边）以外的所有边
+            cushionSegments = [];
+            cushionPieces.forEach(({ pts }) => {
+                for (let i = 0; i < pts.length - 1; i++) {
+                    cushionSegments.push({ ax: pts[i].x, ay: pts[i].y, bx: pts[i + 1].x, by: pts[i + 1].y });
+                }
+            });
         }
 
         function initGame() {
@@ -1119,6 +1189,7 @@
             if (x < BORDER + BALL_RADIUS) return false;
             if (y < BORDER + BALL_RADIUS) return false;
             if (y > TABLE_HEIGHT - BORDER - BALL_RADIUS) return false;
+            if (holes.some(h => Math.hypot(x - h.x, y - h.y) < HOLE_RADIUS + BALL_RADIUS)) return false;
 
             for (let ball of balls) {
                 if (ball === whiteBall) continue;
@@ -1137,6 +1208,7 @@
             if (x > TABLE_WIDTH - BORDER - BALL_RADIUS) return false;
             if (y < BORDER + BALL_RADIUS) return false;
             if (y > TABLE_HEIGHT - BORDER - BALL_RADIUS) return false;
+            if (holes.some(h => Math.hypot(x - h.x, y - h.y) < HOLE_RADIUS + BALL_RADIUS)) return false;
 
             for (let ball of balls) {
                 if (ball === whiteBall) continue;
@@ -1199,57 +1271,37 @@
         }
 
         function resolveCushionCollision(ball) {
-            let nearHole = false;
-            const holeDirection = { x: 0, y: 0 };
-            holes.forEach(hole => {
-                const dx = ball.x - hole.x;
-                const dy = ball.y - hole.y;
-                const dist = Math.hypot(dx, dy);
-                if (dist < HOLE_RADIUS + BALL_RADIUS * 2) {
-                    nearHole = true;
-                    if (dist > 0) {
-                        holeDirection.x += dx / dist;
-                        holeDirection.y += dy / dist;
-                    }
-                }
-            });
-
-            if (nearHole) return;
+            // 库边 = buildCushionGeometry 生成的多边形边（鼻子线、中袋圆角袋嘴、端面、角袋斜切面），
+            // 与 2D 绘制、3D 建模同源。球对每条边做圆-线段碰撞，碰到哪里就从哪里弹开：
+            // 袋口处没有看不见的墙，球也不会穿进库边实体；袋口不再需要"让位窗口"
             const incomingVx = ball.vx;
             const incomingVy = ball.vy;
-            let verticalSide = 0;
-            let horizontalSide = 0;
-            if (ball.x < BORDER + BALL_RADIUS && holeDirection.x < 0.5) {
-                ball.x = BORDER + BALL_RADIUS;
-                ball.vx *= -CUSHION_RESTITUTION;
-                verticalSide = -1;
-            } else if (ball.x > TABLE_WIDTH - BORDER - BALL_RADIUS && holeDirection.x > -0.5) {
-                ball.x = TABLE_WIDTH - BORDER - BALL_RADIUS;
-                ball.vx *= -CUSHION_RESTITUTION;
-                verticalSide = 1;
-            }
-            if (ball.y < BORDER + BALL_RADIUS && holeDirection.y < 0.5) {
-                ball.y = BORDER + BALL_RADIUS;
-                ball.vy *= -CUSHION_RESTITUTION;
-                horizontalSide = -1;
-            } else if (ball.y > TABLE_HEIGHT - BORDER - BALL_RADIUS && holeDirection.y > -0.5) {
-                ball.y = TABLE_HEIGHT - BORDER - BALL_RADIUS;
-                ball.vy *= -CUSHION_RESTITUTION;
-                horizontalSide = 1;
-            }
-
-            if (ball === whiteBall && Math.abs(ball.sideSpin || 0) > 0.001) {
-                if (verticalSide) {
-                    ball.vy += ball.sideSpin * Math.abs(incomingVx) *
-                        SIDE_SPIN_CUSHION_STRENGTH * verticalSide;
+            let hit = false;
+            let spinKick = 0;
+            for (const s of cushionSegments) {
+                const ex = s.bx - s.ax, ey = s.by - s.ay;
+                const t = Math.max(0, Math.min(1, ((ball.x - s.ax) * ex + (ball.y - s.ay) * ey) / (ex * ex + ey * ey)));
+                const px = s.ax + ex * t, py = s.ay + ey * t;
+                const dist = Math.hypot(ball.x - px, ball.y - py);
+                if (dist >= BALL_RADIUS || dist < 1e-9) continue;
+                const nx = (ball.x - px) / dist, ny = (ball.y - py) / dist;   // 指向球的一侧
+                ball.x = px + nx * BALL_RADIUS;
+                ball.y = py + ny * BALL_RADIUS;
+                const vn = ball.vx * nx + ball.vy * ny;
+                if (vn >= 0) continue;                                       // 已经在离开
+                ball.vx -= (1 + CUSHION_RESTITUTION) * vn * nx;              // 法向反弹并衰减，切向不变
+                ball.vy -= (1 + CUSHION_RESTITUTION) * vn * ny;
+                if (ball === whiteBall && Math.abs(ball.sideSpin || 0) > 0.001) {
+                    // 侧旋吃库：沿切向 (ny, -nx) 加速，四面直库边上与原先逐面写法的符号一致
+                    const k = ball.sideSpin * Math.abs(vn) * SIDE_SPIN_CUSHION_STRENGTH;
+                    ball.vx += k * ny;
+                    ball.vy -= k * nx;
+                    spinKick++;
                 }
-                if (horizontalSide) {
-                    ball.vx -= ball.sideSpin * Math.abs(incomingVy) *
-                        SIDE_SPIN_CUSHION_STRENGTH * horizontalSide;
-                }
-                if (verticalSide || horizontalSide) ball.sideSpin *= 0.78;
+                hit = true;
             }
-            if (verticalSide || horizontalSide) {
+            if (spinKick) ball.sideSpin *= 0.78;
+            if (hit) {
                 cushionContactThisShot = true;
                 if (phase === 'break' && ball.type === 'numbered') {
                     breakCushionCount++;
@@ -1273,21 +1325,30 @@
             });
         }
 
+        // 球心落进哪个洞圆就进哪个袋（球心下面已经没有台面）；
+        // 兜底：球心越出库边外沿（正常碰撞下不会发生）也算进最近的袋，防止球卡在库边里
+        function findPocketHole(ball) {
+            let best = null, bestDist = Infinity;
+            holes.forEach(h => {
+                const d = Math.hypot(ball.x - h.x, ball.y - h.y);
+                if (d < bestDist) { best = h; bestDist = d; }
+            });
+            if (bestDist < HOLE_RADIUS) return best;
+            const outer = BORDER - CUSHION_WIDTH;
+            const escaped = ball.x < outer || ball.x > TABLE_WIDTH - outer ||
+                ball.y < outer || ball.y > TABLE_HEIGHT - outer;
+            return escaped ? best : null;
+        }
+
         function checkHoles() {
             const toRemove = [];
             balls.forEach(ball => {
-                holes.forEach(hole => {
-                    const dx = ball.x - hole.x;
-                    const dy = ball.y - hole.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < HOLE_RADIUS + BALL_RADIUS * 0.5) {
-                        if (!pottedThisShot.includes(ball)) {
-                            pottedThisShot.push(ball);
-                            toRemove.push(ball);
-                            playPocketSound(ball);
-                        }
-                    }
-                });
+                if (pottedThisShot.includes(ball)) return;
+                const hole = findPocketHole(ball);
+                if (!hole) return;
+                pottedThisShot.push(ball);
+                toRemove.push(ball);
+                playPocketSound(ball);
             });
             balls = balls.filter(b => !toRemove.includes(b));
         }
@@ -1839,11 +1900,34 @@
         }
 
         function drawTable() {
+            // 与 3D 同一套几何：木框 → 台呢（铺到库边外沿）→ 角上木框方块 → 库边多边形 → 6 个洞圆
+            const c = CUSHION_WIDTH;
+            const left = BORDER, right = TABLE_WIDTH - BORDER;
+            const top = BORDER, bottom = TABLE_HEIGHT - BORDER;
+
             ctx.fillStyle = '#5a3a22';
-            ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT, RAIL_WIDTH);
+            else ctx.rect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+            ctx.fill();
 
             ctx.fillStyle = '#1b6b3a';
-            ctx.fillRect(BORDER, BORDER, TABLE_WIDTH - BORDER * 2, TABLE_HEIGHT - BORDER * 2);
+            ctx.fillRect(left - c, top - c, right - left + c * 2, bottom - top + c * 2);
+            // 库边外沿围成的四个角（角袋洞圆外侧）属于木框
+            ctx.fillStyle = '#5a3a22';
+            ctx.fillRect(left - c, top - c, c, c);
+            ctx.fillRect(right, top - c, c, c);
+            ctx.fillRect(left - c, bottom, c, c);
+            ctx.fillRect(right, bottom, c, c);
+
+            ctx.fillStyle = '#14512c';
+            cushionPieces.forEach(({ pts }) => {
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.closePath();
+                ctx.fill();
+            });
 
             ctx.strokeStyle = '#88cc88';
             ctx.lineWidth = 2;
@@ -1858,32 +1942,12 @@
                 ctx.fillRect(BORDER, BORDER, BAULK_LINE_X - BORDER, TABLE_HEIGHT - BORDER * 2);
             }
 
-            const pocketRadius = HOLE_RADIUS;
-
-            ctx.fillStyle = '#1a1a1a';
-
+            ctx.fillStyle = '#0a0a0a';
             ctx.beginPath();
-            ctx.arc(BORDER, BORDER, pocketRadius, Math.PI * 0.5, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER, pocketRadius, Math.PI, Math.PI * 2.5);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(BORDER, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI * 1.5);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(BORDER + TABLE_INNER_LENGTH, BORDER + TABLE_INNER_WIDTH, pocketRadius, -Math.PI * 0.5, Math.PI);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER, pocketRadius, Math.PI, Math.PI * 2);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(BORDER + TABLE_INNER_LENGTH / 2, BORDER + TABLE_INNER_WIDTH, pocketRadius, 0, Math.PI);
+            holes.forEach(h => {
+                ctx.moveTo(h.x + HOLE_RADIUS, h.y);
+                ctx.arc(h.x, h.y, HOLE_RADIUS, 0, Math.PI * 2);
+            });
             ctx.fill();
 
             ctx.strokeStyle = '#5a3a22';
