@@ -1,6 +1,8 @@
 **/node_modules/
 **/.env
 
+# 交接文档：只给本地 AI 会话看，不进仓库
+HANDOFF*.md
 
 # 3D 构建临时产物
 _build/_crop/

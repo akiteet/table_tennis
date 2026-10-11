@@ -42,6 +42,7 @@ GAMES = {
         dir='snooker/snooker-game', name='斯诺克台球',
         style=dict(cloth=0x0f5a1c, cushion=0x0a4214, wood=0x6b4428, woodDark=0x3a2414),
         markings='snooker', dZone='semicircle',
+        gridLayout=True,   # 宽屏 right-column 是 grid（行高 auto），需额外 CSS 让 3D 球桌撑满
     ),
 }
 
@@ -92,7 +93,7 @@ class Source:
         self.lines[i:i] = [l + self.eol for l in new_text.split('\n')]
 
 
-NAV_LINKS = [('game_2d.html', '本地 2D'), ('game_3d.html', '本地 3D'),
+NAV_LINKS = [('../../index.html', '首页'), ('game_2d.html', '本地 2D'), ('game_3d.html', '本地 3D'),
              ('game_2d_online.html', '联机 2D'), ('game_3d_online.html', '联机 3D'), ('game_2d_rules.html', '规则说明')]
 
 
@@ -115,7 +116,7 @@ def build(key, variant='local'):
     L_CSS_TABLE = src.find_line(r'^        #table \{')        # 顶层规则（媒体查询里的同名规则缩进更深）
     L_CSS_TABLE_END = src.block_end(L_CSS_TABLE)
     L_CSS_END = unique(r'</style>')
-    L_NAV_FIRST = src.find_line(r'class="nav-link')
+    L_NAV_FIRST = src.find_line(r'class="nav-link[ "]')   # 只认链接，不吃掉 <div class="nav-links"> 包装器
     L_NAV_LAST = unique(r'nav-link.*game_2d_rules\.html')
     assert all('nav-link' in src.line(i) for i in range(L_NAV_FIRST, L_NAV_LAST + 1)), key + ': nav links not contiguous'
     L_CANVAS = unique(r'<canvas id="table"')
@@ -278,19 +279,24 @@ def build(key, variant='local'):
                     </div>
                 </div>""")
 
-    # L. 导航：本地 / 联机 × 2D / 3D 四个入口 + 规则，当前页 active
+    # L. 导航：首页 + 本地 / 联机 × 2D / 3D 四个入口 + 规则，当前页 active（包装器 div.nav-links 沿用 2D 源）
     rep(L_NAV_FIRST, L_NAV_LAST, '\n'.join(
         '            <a class="nav-link%s" href="%s">%s</a>' % (' active' if href == dst_name else '', href, label)
         for href, label in NAV_LINKS))
 
     # N. </style> 前追加 .table-stage 覆盖（在 M 之前、位置更靠后）
-    ins(L_CSS_END - 1, """        .table-stage { align-items: stretch; justify-content: stretch; }""")
+    ins(L_CSS_END - 1, """        .table-stage { align-items: stretch; justify-content: stretch; }""" + ("""
+        @media (min-width: 1181px) {
+            /* 宽屏右列是 grid、行高 auto：球桌行吃满剩余高度，信息面板贴底 */
+            .right-column { grid-template-rows: minmax(0, 1fr) auto; }
+            .table-stage { height: 100%; }
+        }""" if cfg.get('gridLayout') else ''))
 
     # M. #table CSS → #table3d + 视角按钮样式
     rep(L_CSS_TABLE, L_CSS_TABLE_END, """        #table3d {
             flex: 1 1 auto; min-width: 0; min-height: 0;
             width: 100%; height: 100%;
-            aspect-ratio: 16 / 9;   /* 父级高度为 auto 时（斯诺克的网格布局）靠它撑出高度；父级定高时不生效 */
+            aspect-ratio: 16 / 9;   /* 父级高度为 auto 时（斯诺克窄屏堆叠布局）靠它撑出高度；父级定高时不生效 */
             border: 3px solid #5a3a22; background: #0e1216;
             cursor: crosshair; position: relative; overflow: hidden;
         }

@@ -1,22 +1,19 @@
 # Table Tennis Games
 
-HTML5 Canvas 球类游戏项目合集，目前包含斯诺克、九球、中式八球和美式八球。
+台球游戏合集：斯诺克、九球、中式八球、美式八球。每款都有本地 2D（Canvas）、本地 3D（three.js）、联机 2D、联机 3D 四个版本，2D 与 3D 玩家可进同一联机房间。
 
 ## 在线试玩
 
-- [斯诺克本地对战](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d.html)
-- [斯诺克联机对战](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d_online.html)
-- [斯诺克规则说明](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d_rules.html)
-- [九球本地对战](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d.html)
-- [九球联机对战](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_online.html)
-- [九球规则说明](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_rules.html)
-- [中式八球本地 2D 对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d.html)
-- [中式八球本地 3D 对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_3d.html)
-- [中式八球联机对战](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_online.html)
-- [中式八球规则说明](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_rules.html)
-- [美式八球本地对战](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d.html)
-- [美式八球联机对战](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_online.html)
-- [美式八球规则说明](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_rules.html)
+首页：[https://akiteet.github.io/table_tennis/](https://akiteet.github.io/table_tennis/)
+
+| 游戏 | 本地 2D | 本地 3D | 联机 2D | 联机 3D | 规则 |
+|---|---|---|---|---|---|
+| 斯诺克 | [打开](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d.html) | [打开](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_3d.html) | [打开](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d_online.html) | [打开](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_3d_online.html) | [打开](https://akiteet.github.io/table_tennis/snooker/snooker-game/game_2d_rules.html) |
+| 九球 | [打开](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d.html) | [打开](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_3d.html) | [打开](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_online.html) | [打开](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_3d_online.html) | [打开](https://akiteet.github.io/table_tennis/nine_ball/nine_ball-game/game_2d_rules.html) |
+| 中式八球 | [打开](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d.html) | [打开](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_3d.html) | [打开](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_online.html) | [打开](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_3d_online.html) | [打开](https://akiteet.github.io/table_tennis/chinese_eight_ball/chinese_eight_ball-game/game_2d_rules.html) |
+| 美式八球 | [打开](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d.html) | [打开](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_3d.html) | [打开](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_online.html) | [打开](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_3d_online.html) | [打开](https://akiteet.github.io/table_tennis/american_eight_ball/american_eight_ball-game/game_2d_rules.html) |
+
+联机版需要对应的 Render 服务在线（免费实例首次连接可能要等几十秒唤醒）。
 
 ## 目录
 

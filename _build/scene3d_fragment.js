@@ -94,6 +94,7 @@
             orbitControls.maxPolarAngle = Math.PI * 0.495;
             orbitControls.minDistance = 60;
             orbitControls.maxDistance = 1100 * viewScale();
+            orbitControls.zoomToCursor = true;   // 滚轮朝鼠标指向点缩放（OrbitControls 内置，相机与目标一起平移，视角不歪）
             camTarget = orbitControls.target;
             camTarget.set(0, 0, 0);
 
@@ -381,7 +382,13 @@
             const shaftLen = cuePitchGroup.userData.shaftLen;
             cueYawGroup.position.set(toWorldX(whiteBall.x), BALL_RADIUS + 1.5, toWorldZ(whiteBall.y));
             cueYawGroup.rotation.y = Math.PI - angle;
+
+            // 高低杆：俯仰角
             cuePitchGroup.rotation.z = cueSpinY * 0.12;
+
+            // 左右塞：杆沿水平方向平移。yaw 组局部 +z 是击球者的左手边，所以右塞（cueSpinX > 0）取负
+            cuePitchGroup.position.z = -cueSpinX * BALL_RADIUS * 0.6;
+
             cuePitchGroup.position.x = gap + shaftLen / 2;
         }
 
@@ -690,9 +697,21 @@
                 }
                 const t = Math.min(1, (now - a.t0) / a.duration);
                 const e = t * t;
-                a.mesh.position.x = a.fromX + (a.toX - a.fromX) * e;
-                a.mesh.position.z = a.fromZ + (a.toZ - a.fromZ) * e;
-                a.mesh.position.y = BALL_RADIUS - 14 * e;
+                const drop = t * t * t;  // 三次方：更强的重力加速感
+
+                // 水平移动：二次缓动 + 轻微螺旋（螺旋半径首尾为 0，起点不跳、终点落在洞心）
+                const spiralRadius = 2 * Math.sin(Math.PI * t);
+                const spiralAngle = t * Math.PI * 1.5;
+                a.mesh.position.x = a.fromX + (a.toX - a.fromX) * e + Math.cos(spiralAngle) * spiralRadius;
+                a.mesh.position.z = a.fromZ + (a.toZ - a.fromZ) * e + Math.sin(spiralAngle) * spiralRadius;
+
+                // 垂直下降
+                a.mesh.position.y = BALL_RADIUS - 18 * drop;
+
+                // 球体旋转
+                a.mesh.rotation.x += 0.15;
+                a.mesh.rotation.y += 0.1;
+
                 a.mesh.scale.setScalar(Math.max(0.35, 1 - 0.6 * e));
                 if (t >= 1) {
                     a.mesh.visible = false;
@@ -851,9 +870,18 @@
             tmpDir.set(Math.cos(cueAngle), 0, Math.sin(cueAngle));
             const wx = toWorldX(whiteBall.x);
             const wz = toWorldZ(whiteBall.y);
+
+            // 检测白球是否在运动
+            const isMoving = Math.abs(whiteBall.vx || 0) > 0.1 || Math.abs(whiteBall.vy || 0) > 0.1;
+
             // 相机位于杆尾上方：能看到球杆从画面下方伸向白球
             const desiredPos = new THREE.Vector3(wx - tmpDir.x * 74, BALL_RADIUS + 24, wz - tmpDir.z * 74);
-            const desiredTarget = new THREE.Vector3(wx + tmpDir.x * 60, BALL_RADIUS - 2, wz + tmpDir.z * 60);
+
+            // 击球后：相机目标跟随白球，击球前：看向击球方向
+            const desiredTarget = isMoving
+                ? new THREE.Vector3(wx, BALL_RADIUS, wz)  // 击球后：看白球当前位置
+                : new THREE.Vector3(wx + tmpDir.x * 60, BALL_RADIUS - 2, wz + tmpDir.z * 60);  // 击球前：看击球方向
+
             camera.position.lerp(desiredPos, 0.18);
             camTarget.lerp(desiredTarget, 0.18);
             camera.lookAt(camTarget);

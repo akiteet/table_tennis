@@ -697,7 +697,7 @@
         #table3d {
             flex: 1 1 auto; min-width: 0; min-height: 0;
             width: 100%; height: 100%;
-            aspect-ratio: 16 / 9;   /* 父级高度为 auto 时（斯诺克的网格布局）靠它撑出高度；父级定高时不生效 */
+            aspect-ratio: 16 / 9;   /* 父级高度为 auto 时（斯诺克窄屏堆叠布局）靠它撑出高度；父级定高时不生效 */
             border: 3px solid #5a3a22; background: #0e1216;
             cursor: crosshair; position: relative; overflow: hidden;
         }
@@ -1059,11 +1059,18 @@
             }
         }
         .table-stage { align-items: stretch; justify-content: stretch; }
+        @media (min-width: 1181px) {
+            /* 宽屏右列是 grid、行高 auto：球桌行吃满剩余高度，信息面板贴底 */
+            .right-column { grid-template-rows: minmax(0, 1fr) auto; }
+            .table-stage { height: 100%; }
+        }
     </style>
 </head>
 <body>
     <nav class="top-nav" aria-label="页面导航">
         <div class="nav-title">斯诺克台球 - 联机对战</div>
+        <div class="nav-links">
+            <a class="nav-link" href="../../index.html">首页</a>
             <a class="nav-link" href="game_2d.html">本地 2D</a>
             <a class="nav-link" href="game_3d.html">本地 3D</a>
             <a class="nav-link" href="game_2d_online.html">联机 2D</a>
@@ -1330,7 +1337,7 @@
         const HIGH_POWER_BOOST = 4;
         const CUSHION_RESTITUTION = 0.82;
         const POCKET_JAW_RADIUS = 8;            // 中袋库边鼻端圆角（袋嘴）半径；须小于库边宽，否则圆弧终点与端面点重合成零长碰撞边
-        const POCKET_CORNER_JAW_RADIUS = 4;     // 角袋库边鼻端凸圆角半径（按 snooker.jpg 袋口宽 85mm 取）；圆角同时与鼻子线、洞圆相切
+        const POCKET_CORNER_JAW_RADIUS = 4;     // 角袋库边鼻端凸圆角半径；圆角同时与鼻子线、45° 直线端面相切
         const TOP_SPIN_STRENGTH = 0.42;
         const SIDE_SPIN_CUSHION_STRENGTH = 0.24;
         const SIDE_SPIN_DECAY = 0.992;
@@ -1863,14 +1870,15 @@
 
         // 库边平面形状（逻辑坐标）：2D 绘制、物理碰撞、3D 建模共用这一份，三者不会对不上。
         // 长库边每条两段（角袋 → 中袋），短库边每条一段：
-        //   角袋端 —— 斯诺克式圆角袋嘴（标准台示意图 snooker.jpg）：鼻子线 → 凸圆角（与鼻子线、洞圆都相切）
-        //             → 沿洞圆的凹弧 → 库边外沿；洞心在台呢角上，洞半径 = 库边宽；
+        //   角袋端 —— 鼻子线 → 凸圆角 → 平行于 45° 角平分线的直线端面（与洞圆相切于垂直角平分线的直径端点，
+        //             两侧端面间距 = 洞直径）→ 沿洞圆的凹弧 → 库边外沿；洞心在台呢角上，洞半径 = 库边宽；
         //   中袋端 —— 鼻子线 → 圆角袋嘴 → 垂直端面，端面与中袋洞圆相切于库边外沿
         function buildCushionGeometry() {
             const c = CUSHION_WIDTH, r = HOLE_RADIUS, jaw = POCKET_JAW_RADIUS;
             const cj = POCKET_CORNER_JAW_RADIUS;
-            const sj = Math.sqrt(r * r + 2 * r * cj);   // 角袋圆角圆心沿库边离台角的距离（圆角与洞圆外切）
-            const th = Math.atan2(cj, sj);               // 圆角与洞圆切点的方向
+            const rp = r / Math.cos(Math.PI / 40);       // 贴洞弧折线顶点半径（见 cornerEnd）
+            const k = rp * Math.SQRT2;                   // 角袋直线端面：s + d = k，过贴洞弧末顶点、平行于角平分线
+            const sj = k + cj * (Math.SQRT2 - 1);        // 角袋圆角圆心沿库边离台角的距离（圆角切鼻子线与端面）
             const L = BORDER, R = TABLE_WIDTH - BORDER;
             const T = BORDER, B = TABLE_HEIGHT - BORDER;
             const midX = BORDER + TABLE_INNER_LENGTH / 2;
@@ -1883,10 +1891,11 @@
                 return pts;
             };
             // 角袋端头点列，局部坐标 s = 沿库边离台角的距离、d = 离鼻子线往木框方向的深度；从库边外沿走到鼻子线
-            // 贴洞弧用折线逼近：顶点外扩到 r / cos(半步角)，每条弦都外切洞圆，库边不侵入洞
+            // 贴洞弧（90° → 45°）用折线逼近：顶点外扩到 r / cos(半步角)，每条弦都外切洞圆，库边不侵入洞；
+            // 弧末顶点到圆角起点之间的那条边就是直线端面
             const cornerEnd = [
-                ...arc(0, 0, r / Math.cos((Math.PI / 2 - th) / 20), Math.PI / 2, th, 10),
-                ...arc(sj, cj, cj, th + Math.PI, Math.PI * 3 / 2, 8).slice(1)
+                ...arc(0, 0, rp, Math.PI / 2, Math.PI / 4, 5),
+                ...arc(sj, cj, cj, Math.PI * 5 / 4, Math.PI * 3 / 2, 8)
             ].map(p => ({ s: p.x, d: p.y }));
 
             cushionPieces = [];
@@ -3616,6 +3625,7 @@
             orbitControls.maxPolarAngle = Math.PI * 0.495;
             orbitControls.minDistance = 60;
             orbitControls.maxDistance = 1100 * viewScale();
+            orbitControls.zoomToCursor = true;   // 滚轮朝鼠标指向点缩放（OrbitControls 内置，相机与目标一起平移，视角不歪）
             camTarget = orbitControls.target;
             camTarget.set(0, 0, 0);
 
@@ -3903,7 +3913,13 @@
             const shaftLen = cuePitchGroup.userData.shaftLen;
             cueYawGroup.position.set(toWorldX(whiteBall.x), BALL_RADIUS + 1.5, toWorldZ(whiteBall.y));
             cueYawGroup.rotation.y = Math.PI - angle;
+
+            // 高低杆：俯仰角
             cuePitchGroup.rotation.z = cueSpinY * 0.12;
+
+            // 左右塞：杆沿水平方向平移。yaw 组局部 +z 是击球者的左手边，所以右塞（cueSpinX > 0）取负
+            cuePitchGroup.position.z = -cueSpinX * BALL_RADIUS * 0.6;
+
             cuePitchGroup.position.x = gap + shaftLen / 2;
         }
 
@@ -4212,9 +4228,21 @@
                 }
                 const t = Math.min(1, (now - a.t0) / a.duration);
                 const e = t * t;
-                a.mesh.position.x = a.fromX + (a.toX - a.fromX) * e;
-                a.mesh.position.z = a.fromZ + (a.toZ - a.fromZ) * e;
-                a.mesh.position.y = BALL_RADIUS - 14 * e;
+                const drop = t * t * t;  // 三次方：更强的重力加速感
+
+                // 水平移动：二次缓动 + 轻微螺旋（螺旋半径首尾为 0，起点不跳、终点落在洞心）
+                const spiralRadius = 2 * Math.sin(Math.PI * t);
+                const spiralAngle = t * Math.PI * 1.5;
+                a.mesh.position.x = a.fromX + (a.toX - a.fromX) * e + Math.cos(spiralAngle) * spiralRadius;
+                a.mesh.position.z = a.fromZ + (a.toZ - a.fromZ) * e + Math.sin(spiralAngle) * spiralRadius;
+
+                // 垂直下降
+                a.mesh.position.y = BALL_RADIUS - 18 * drop;
+
+                // 球体旋转
+                a.mesh.rotation.x += 0.15;
+                a.mesh.rotation.y += 0.1;
+
                 a.mesh.scale.setScalar(Math.max(0.35, 1 - 0.6 * e));
                 if (t >= 1) {
                     a.mesh.visible = false;
@@ -4373,9 +4401,18 @@
             tmpDir.set(Math.cos(cueAngle), 0, Math.sin(cueAngle));
             const wx = toWorldX(whiteBall.x);
             const wz = toWorldZ(whiteBall.y);
+
+            // 检测白球是否在运动
+            const isMoving = Math.abs(whiteBall.vx || 0) > 0.1 || Math.abs(whiteBall.vy || 0) > 0.1;
+
             // 相机位于杆尾上方：能看到球杆从画面下方伸向白球
             const desiredPos = new THREE.Vector3(wx - tmpDir.x * 74, BALL_RADIUS + 24, wz - tmpDir.z * 74);
-            const desiredTarget = new THREE.Vector3(wx + tmpDir.x * 60, BALL_RADIUS - 2, wz + tmpDir.z * 60);
+
+            // 击球后：相机目标跟随白球，击球前：看向击球方向
+            const desiredTarget = isMoving
+                ? new THREE.Vector3(wx, BALL_RADIUS, wz)  // 击球后：看白球当前位置
+                : new THREE.Vector3(wx + tmpDir.x * 60, BALL_RADIUS - 2, wz + tmpDir.z * 60);  // 击球前：看击球方向
+
             camera.position.lerp(desiredPos, 0.18);
             camTarget.lerp(desiredTarget, 0.18);
             camera.lookAt(camTarget);

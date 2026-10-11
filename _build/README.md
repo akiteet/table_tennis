@@ -7,9 +7,8 @@
 
 - `scene3d_fragment.js` — 3D 渲染层代码片段，四款游戏共用（场景、球台、球纹理、球杆、引导线、进袋动画、三视角相机、raycast 交互、叫袋标记）
 - `build_3d.py` — 手术脚本：按 `GAMES` 配置读各游戏 `game_2d.html`，正则 + 花括号配对定位锚点，写出 `game_3d.html`
-- `port_pockets.py` — 袋口几何移植脚本（美式台 45° 斜切 / 斯诺克圆角贴洞），可重复运行
-- `add_3d_links.py` — 给 2D 页导航与首页补 3D 入口，可重复运行
-- `verify_pockets.mjs` — 袋口几何 / 进袋 / 穿模模拟自检；`smoke.mjs` — 无头 Chrome 页面初始化冒烟（`SHOT=目录` 存截图，`PLACE=1` 检查单机 3D 点击摆白球链路）
+- `add_3d_links.py` — 统一 2D / 联网 / 规则页导航（首页 + 四个版本 + 规则，与 3D 页共用 `NAV_LINKS`）和首页卡片入口，可重复运行
+- `verify_pockets.mjs` — 袋口几何 / 进袋 / 穿模模拟自检（`node verify_pockets.mjs <game_2d.html> ...`）；`smoke.mjs` — 无头 Chrome 页面初始化冒烟（`SHOT=目录` 存截图，`PLACE=1` 检查单机 3D 点击摆白球链路）
 - `online_smoke.mjs` — 联网端到端：起游戏 server.js，2D + 3D 联网页同房间，查连接 / 球位 / 操作权 / 摆球同步（`node online_smoke.mjs snooker/snooker-game`）
 - `check.mjs` — 生成过程的临时产物（module 语法检查用），可随时删除
 
@@ -164,7 +163,15 @@ node smoke.mjs snooker/snooker-game/game_3d.html
   四个 `server.js` 加 `/_vendor/` 路由（3D 页 importmap 的 `../../_vendor/…` 经服务器解析为 `/_vendor/…`），越界检查改为
   `startsWith(base + path.sep)`。`add_3d_links.py` 改为统一所有 2D / 联网 / 规则页导航为"本地 2D / 本地 3D / 联机 2D / 联机 3D / 规则"，
   首页卡片补"联机 3D"。新增 `online_smoke.mjs`：起真实 server.js，2D + 3D 两个页面进同一房间，检查连接、开局球位、
-  操作权归属、2D 摆白球同步到 3D——四款游戏全部通过。**部署前须提交 `_vendor/`（目前未纳入 git），Render / Pages 才能加载 three.js。**
+  操作权归属、2D 摆白球同步到 3D——四款游戏全部通过。`_vendor/` 已纳入 git，Render / Pages 可直接加载 three.js。
+
+- 2026-10-11（第十八轮，斯诺克修复 + 3D 细节）：斯诺克开球即崩——角袋 `cornerEnd` 点写成 `{s, d}` 却按 `p.x / p.y`
+  映射，碰撞线段全为 NaN，已修。斯诺克角袋按用户确认改为"鼻子线 → 凸圆角 4 → 平行 45° 角平分线的直线端面（与洞圆相切）
+  → 贴洞弧"，两侧端面间距 = 洞直径 ≈ 90mm（单机 + 联网 2D 同改）；45° 来球有效袋口 8.5 → 10.5，穿模 0。
+  `#table3d` 恢复 `aspect-ratio`（上一轮被删导致斯诺克 3D 台面塌成细条），GAMES 新增 `gridLayout`：斯诺克宽屏
+  right-column 行改 `minmax(0, 1fr) auto` 让球桌吃满。片段：左右塞改为杆沿水平方向平移（原误改 `position.y`），
+  滚轮缩放改用 OrbitControls `zoomToCursor`，进袋动画去掉起点跳变、下落改 t³。导航加"首页"（`NAV_LINKS`），
+  `L_NAV_FIRST` 正则不再吃掉 `<div class="nav-links">`。删除已完成的 `port_pockets.py`。
 
 ## 推广到其它游戏
 
